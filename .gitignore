@@ -1,0 +1,94 @@
+# ============ 依赖 ============
+node_modules/
+**/node_modules/
+.npm/
+.pnp.*
+
+# ============ 构建产物 ============
+dist/
+**/dist/
+build/
+out/
+*.tsbuildinfo
+
+# ============ 数据库（测试/开发） ============
+*.db
+*.sqlite
+*.sqlite3
+test-erp.db
+erp.db
+erp.db-journal
+
+# ============ 上传文件（不进 git） ============
+server/uploads/
+uploads/
+
+# ============ 日志 ============
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pm2-*.log
+/root/.pm2/logs/
+
+# ============ 临时文件 ============
+.tmp/
+.cache/
+.turbo/
+.parcel-cache/
+.next/
+.nuxt/
+.vite/
+.cache/
+
+# ============ 编辑器 / IDE ============
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ============ 环境变量 ============
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# ============ 测试覆盖率 ============
+coverage/
+**/coverage/
+*.lcov
+
+# ============ Docker ============
+docker-compose.override.yml
+.docker-data/
+
+# ============ Hermes 会话 ============
+.hermes/
+.hindsight/
+
+# ============ 后端运行的临时数据 ============
+server/test-erp.db
+server/.tsbuildinfo
+
+# ============ CI artifacts ============
+.github/.artifacts/
+
+# ============ 老的 ERP 残留（vite 已迁移到 src/，根目录这些不再用）============
+# 保留：vite.config.ts、tsconfig.json、tsconfig.node.json（vite + CI 需要）
+# 保留：package.json、Dockerfile
+# 忽略：src 里已有副本的入口文件
+/frontend/App.tsx
+/frontend/main.tsx
+/frontend/index.html
+/frontend/index.css
+/frontend/vite-env.d.ts
+/frontend/data/
+/frontend/layouts/
+/frontend/pages/
+/frontend/store/
+/frontend/types/
