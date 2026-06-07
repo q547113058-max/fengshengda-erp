@@ -1,9 +1,10 @@
-import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, NotFoundException } from '@nestjs/common';
+import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Product } from '../entities/product.entity';
 import { ProductPrice } from '../entities/product-price.entity';
+import { InventoryBatch } from '../entities/inventory-batch.entity';
 import { CreateProductDto, UpdateProductDto, ProductPriceDto, UpdatePriceDto } from '../dto/product.dto';
 
 @ApiTags('产品')
@@ -12,6 +13,7 @@ class ProductsController {
   constructor(
     @InjectRepository(Product) private products: Repository<Product>,
     @InjectRepository(ProductPrice) private prices: Repository<ProductPrice>,
+    private ds: DataSource,
   ) {}
 
   @Get()
@@ -58,11 +60,20 @@ class ProductsController {
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: '删除产品（含价格）' })
+  @ApiOperation({ summary: '删除产品（含价格，事务回滚）' })
   async remove(@Param('id', ParseIntPipe) id: number) {
-    await this.prices.delete({ product_id: id });
-    await this.products.delete(id);
-    return { ok: true };
+    return this.ds.transaction(async mgr => {
+      // 检查是否有库存批次引用（防止孤儿）
+      const batchCount = await mgr.count(InventoryBatch, { where: { product_id: id } });
+      if (batchCount > 0) {
+        throw new BadRequestException(
+          `该产品有 ${batchCount} 个库存批次，无法删除。请先清空库存。`,
+        );
+      }
+      await mgr.delete(ProductPrice, { product_id: id });
+      await mgr.delete(Product, id);
+      return { ok: true };
+    });
   }
 
   @Post(':id/prices')

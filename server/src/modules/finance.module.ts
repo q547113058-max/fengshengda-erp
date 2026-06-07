@@ -1,4 +1,4 @@
-import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, Query, NotFoundException } from '@nestjs/common';
+import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, Query, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
@@ -46,10 +46,7 @@ class FinanceController {
   @Post('transactions')
   @ApiOperation({ summary: '手工记账（任意 source_type=manual）' })
   createTx(@Body() body: CreateTransactionDto) {
-    if (!body.account_id || !body.direction || !body.amount || !body.source_type) {
-      throw new NotFoundException('account_id/direction/amount/source_type 必填');
-    }
-    return this.txRepo.save(this.txRepo.create(body));
+    return this.txRepo.save(this.txRepo.create(body as any));
   }
 
   @Delete('transactions/:id')

@@ -7,11 +7,28 @@ export interface ApiError {
   message: string | string[];
 }
 
+// 从 localStorage 读 token（如果存在）
+function getAuthToken(): string | null {
+  try {
+    return localStorage.getItem('fsd-token');
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(BASE + path, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
-    ...init,
-  });
+  const token = getAuthToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(init?.headers as Record<string, string> | undefined),
+  };
+  // 未来后端加 JWT 时，前端自动带上
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(BASE + path, { ...init, headers });
+  if (res.status === 401) {
+    // 401 未授权 → 清 localStorage，触发重新登录
+    try { localStorage.removeItem('fsd-token'); } catch { /* ignore */ }
+  }
   if (!res.ok) {
     let body: any = null;
     try { body = await res.json(); } catch { /* ignore */ }
@@ -64,7 +81,11 @@ export const api = {
     if (product_id) fd.append('product_id', String(product_id));
     if (type) fd.append('type', type);
     if (uploader_id) fd.append('uploader_id', String(uploader_id));
-    const res = await fetch('/api/media/upload', { method: 'POST', body: fd });
+    const token = getAuthToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // FormData 不要手动设 Content-Type，浏览器自动加 boundary
+    const res = await fetch('/api/media/upload', { method: 'POST', body: fd, headers });
     if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
     return res.json();
   },

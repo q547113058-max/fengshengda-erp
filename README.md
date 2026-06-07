@@ -431,6 +431,48 @@ gp                            # 用 $EDITOR 写长 message
 
 ---
 
+## 🔐 安全 — 未修复项（已记录，v0.3 修）
+
+> 这些是代码审查时识别但**本次未修**的安全问题，**生产部署前必须处理**：
+
+| 严重度 | 问题 | 位置 | 修法 |
+|---|---|---|---|
+| 🔴 P0 | 所有 controller 无 JWT/Guard，14 个端点任何人都能调 | 全部 `*.module.ts` | 加 `JwtAuthGuard` + `@UseGuards(AuthGuard('jwt'), RolesGuard)` + `@Roles('boss','finance'...)` 装饰器；前端 login 后存 `localStorage['fsd-token']`（**已就位**）+ 401 自动清 |
+| 🔴 P0 | 密码明文 + `/api/users` 完全公开 | `auth.module.ts` line 14 / 26-29 | 装 `bcrypt`：`hash(await bcrypt.hash(pw, 10))`；`/api/users` 加 Guard 限 boss |
+| 🔴 P0 | 前端可改 `localStorage['fsd-auth'].role` 伪造 boss | `store/index.ts` | 后端 JWT 签名校验 + HttpOnly cookie（前端 JS 读不到） |
+| 🟠 P1 | CORS `cors: true` 任何 origin | `main.ts` | 改 `origin: process.env.CORS_ORIGINS?.split(',')` 白名单 |
+| 🟠 P1 | 无 rate-limit，登录接口可暴力 | `auth.module.ts` | 装 `@nestjs/throttler` + `@Throttle(5, 60)` |
+| 🟠 P1 | 无 HTTPS，密码/财务明文传输 | 部署 | 上 nginx + Let's Encrypt / Cloudflare |
+| 🟠 P1 | MySQL 密码在 env 明文 (`erp_pass_2026`) | `.env` / pm2 | docker secret / HashiCorp Vault |
+| 🟠 P1 | `synchronize: true` 生产自动改表结构 | `app.module.ts` | 改 TypeORM migrations：手动写 `Migration` 文件 |
+| 🟠 P1 | `/health` 泄漏 rss/uptime 给攻击者 | `health.module.ts` | 拆 `/health`（公开）vs `/internal/health`（仅内网） |
+
+**v0.3 路线**：JWT（access + refresh）+ HttpOnly cookie + bcrypt + CORS 白名单 + throttler + migrations + nginx HTTPS
+
+---
+
+## 🔁 生产部署 Checklist
+
+部署到正式服前**逐项验证**：
+
+- [ ] `NODE_ENV=production`
+- [ ] `DB_TYPE=mysql` 且 DB 账号是专用（不是 root）
+- [ ] `JWT_SECRET=32 位随机` + bcrypt
+- [ ] `CORS_ORIGINS=https://erp.example.com`
+- [ ] 启用 nginx + Let's Encrypt（HTTPS 强制）
+- [ ] `SENTRY_DSN=...`（错误上报）
+- [ ] pm2 `pm2 save && pm2 startup`
+- [ ] MariaDB 每日 3:00 自动备份（cron）
+- [ ] `synchronize: false`，TypeORM migration 文件就位
+- [ ] 关掉 `/internal/*` 端点的外网访问
+- [ ] 日志脱敏：password/token/cookie 已 redact
+- [ ] Playwright + Jest 全测在 CI 绿
+- [ ] rate-limit 在 nginx 层（限制 100 req/s）
+
+详见 `docs/deploy.md`（TODO）
+
+---
+
 ## 🔁 数据域切换
 
 只在 `server/src/seed.service.ts` 改种子数据，**保持外键 ID 稳定**（user.id=1 是 boss，永远是老板），前端代码无需改。

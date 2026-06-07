@@ -6,6 +6,7 @@ import { InventoryBatch } from '../entities/inventory-batch.entity';
 import { InventoryMovement } from '../entities/inventory-movement.entity';
 import { Product } from '../entities/product.entity';
 import { CreateMovementDto } from '../dto/purchase-sales.dto';
+import { UpdateBatchDto } from '../dto/inventory.dto';
 
 @ApiTags('库存')
 @Controller()
@@ -20,17 +21,27 @@ class InventoryController {
   @Get('inventory/batches') listBatches() { return this.batches.find({ order: { id: 'ASC' } }); }
 
   @Get('inventory/aggregated')
+  @ApiOperation({ summary: '按产品聚合库存（SQL GROUP BY，不在 Node 端 N+1 过滤）' })
   async aggregated() {
-    const list = await this.batches.find();
+    // 在数据库做 GROUP BY + 关联
+    const rows = await this.batches
+      .createQueryBuilder('b')
+      .select('b.product_id', 'product_id')
+      .addSelect('COUNT(*)', 'batch_count')
+      .addSelect('SUM(b.qty_total)', 'qty_total')
+      .addSelect('SUM(b.qty_remaining)', 'qty_remaining')
+      .addSelect('SUM(b.qty_total - b.qty_remaining)', 'sold')
+      .groupBy('b.product_id')
+      .getRawMany();
     const products = await this.products.find();
     return products.map(p => {
-      const my = list.filter(b => b.product_id === p.id);
+      const r = rows.find((row: any) => row.product_id === p.id);
       return {
         product: p,
-        batchCount: my.length,
-        qtyTotal: my.reduce((a, b) => a + b.qty_total, 0),
-        qtyRem: my.reduce((a, b) => a + b.qty_remaining, 0),
-        sold: my.reduce((a, b) => a + (b.qty_total - b.qty_remaining), 0),
+        batchCount: Number(r?.batch_count) || 0,
+        qtyTotal: Number(r?.qty_total) || 0,
+        qtyRem: Number(r?.qty_remaining) || 0,
+        sold: Number(r?.sold) || 0,
       };
     });
   }
@@ -41,7 +52,9 @@ class InventoryController {
     return b;
   }
 
-  @Put('inventory/batch/:id') async updateBatch(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<InventoryBatch>) {
+  @Put('inventory/batch/:id')
+  @ApiOperation({ summary: '更新批次（仅允许 warehouse/holder/status/qty_remaining）' })
+  async updateBatch(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateBatchDto) {
     await this.batches.update(id, body);
     return this.batches.findOne({ where: { id } });
   }
@@ -50,19 +63,20 @@ class InventoryController {
   @Post('inventory/movement')
   @ApiOperation({ summary: '登记出入库（自动扣减/增加批次剩余）' })
   async addMovement(@Body() body: CreateMovementDto) {
-    if (!body.batch_id || !body.type || !body.qty) throw new BadRequestException('batch_id/type/qty 必填');
     return this.ds.transaction(async mgr => {
       const batch = await mgr.findOne(InventoryBatch, { where: { id: body.batch_id } });
       if (!batch) throw new NotFoundException('批次不存在');
-      // 校验数量
+      // 校验数量（DTO 已校验 qty>0）
       if ((body.type === 'out' || body.type === 'loss') && batch.qty_remaining < body.qty) {
         throw new BadRequestException(`批次 ${batch.batch_no} 剩余 ${batch.qty_remaining} 箱，不足`);
       }
       const newRem = (body.type === 'in' || body.type === 'return') ? batch.qty_remaining + body.qty : batch.qty_remaining - body.qty;
-      await mgr.update(InventoryBatch, batch.id, {
-        qty_remaining: newRem,
-        status: newRem === 0 ? 'sold_out' : (body.type === 'transfer' ? 'transferred' : 'in_stock'),
-      });
+      // status 逻辑：按 type 分支判断，不混三元
+      let newStatus: 'in_stock' | 'sold_out' | 'transferred';
+      if (newRem === 0) newStatus = 'sold_out';
+      else if (body.type === 'transfer') newStatus = 'transferred';
+      else newStatus = 'in_stock';
+      await mgr.update(InventoryBatch, batch.id, { qty_remaining: newRem, status: newStatus });
       return mgr.save(mgr.create(InventoryMovement, {
         batch_id: batch.id,
         type: body.type,
