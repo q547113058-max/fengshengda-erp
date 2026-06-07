@@ -408,6 +408,23 @@ git commit -m "feat: ..."
 git push origin main
 ```
 
+### 一键推送（推荐）
+```bash
+# 安装
+ln -sf /root/workspace/erp-prototype/.gpalias.sh /usr/local/bin/gp
+
+# 使用
+gp "feat: 新增佣金结算界面"   # 自动 add + commit + push
+gp                            # 用 $EDITOR 写长 message
+```
+
+特性：
+- ✅ 仅在有改动时推送
+- ✅ 提交前打印 status 概览
+- ✅ 推送到 main 自动 push
+- ✅ 非 main 分支只 commit 不 push
+- ✅ 空 message 报错拒绝执行
+
 ---
 
 ## 🔁 数据域切换
@@ -466,7 +483,7 @@ pm2 save
 1. Fork / Clone
 2. 创建 feature branch（`git checkout -b feat/xxx`）
 3. 提交代码（带测试）
-4. `git push` 触发 CI
+4. 用 `gp "feat: 提交信息"` 一键推送
 5. 开 PR
 6. 等 Code Review + CI 绿
 7. 合并
