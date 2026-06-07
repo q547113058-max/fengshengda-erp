@@ -113,14 +113,28 @@ curl http://localhost:5173/ | head -c 200
 
 ### 方式 3：docker-compose 一键起
 
+**前提**：Docker 24+ 已装并跑通
+
 ```bash
 cd /root/workspace/erp-prototype
 docker compose up -d     # mysql + server + frontend 一起起
-# 访问前端 http://localhost:8080（nginx 反代）
-# 访问后端 http://localhost:8080/api
-# Swagger http://localhost:8080/api/docs
-docker compose ps        # 健康状态
-docker compose down -v   # 销毁（带数据）
+
+# 验证
+npm run compose:smoke   # 等 3 healthy + curl 7 端点
+```
+
+**访问**：
+- 前端 http://localhost:8080
+- 后端 http://localhost:8080/api
+- Swagger http://localhost:8080/api/docs
+- MySQL localhost:3306（生产去掉 ports）
+
+**本机 docker 代理故障修复**：
+```bash
+# 现象：docker build 卡在 docker.io/library/node:20-alpine...
+# 原因：/etc/docker/daemon.json 配了 socks5 代理但 10808 已死
+sudo bash scripts/fix-docker-proxy.sh
+# 脚本会备份 + 清空 proxies + restart dockerd
 ```
 
 详见 [docker-compose.README.md](./docker-compose.README.md)

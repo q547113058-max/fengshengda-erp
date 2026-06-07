@@ -11,11 +11,18 @@
     "dev:frontend": "npm --workspace frontend run dev",
     "dev": "concurrently -n server,frontend -c blue,green \"npm:dev:server\" \"npm:dev:frontend\"",
     "build": "npm --workspace server run build && npm --workspace frontend run build",
+    "build:server": "npm --workspace server run build",
+    "build:frontend": "npm --workspace frontend run build",
     "seed": "npm --workspace server run seed",
     "test": "npm --workspace server test",
     "test:watch": "npm --workspace server run test:watch",
     "test:e2e": "DB_TYPE=better-sqlite3 DB_PATH=test-erp.db npm --workspace server test",
-    "tsc:check": "npx tsc --noEmit -p server/tsconfig.json && npx tsc --noEmit -p frontend/tsconfig.json"
+    "tsc:check": "npx tsc --noEmit -p server/tsconfig.json && npx tsc --noEmit -p frontend/tsconfig.json",
+    "docker:fix": "sudo bash scripts/fix-docker-proxy.sh",
+    "docker:build": "docker build -t fengshengda-server -f server/Dockerfile . && docker build -t fengshengda-frontend -f frontend/Dockerfile .",
+    "compose:up": "docker compose up -d",
+    "compose:down": "docker compose down -v",
+    "compose:smoke": "bash scripts/compose-smoke.sh"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"

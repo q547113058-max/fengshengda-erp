@@ -78,6 +78,11 @@ server/.tsbuildinfo
 # ============ CI artifacts ============
 .github/.artifacts/
 
+# ============ Vite build 产物 ============
+/frontend/vite.config.d.ts
+/frontend/vite.config.js
+/frontend/dist/
+
 # ============ 老的 ERP 残留（vite 已迁移到 src/，根目录这些不再用）============
 # 保留：vite.config.ts、tsconfig.json、tsconfig.node.json（vite + CI 需要）
 # 保留：package.json、Dockerfile
