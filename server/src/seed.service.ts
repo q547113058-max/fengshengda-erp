@@ -2,6 +2,7 @@
 import { Injectable, OnApplicationBootstrap, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 
 import { User } from './entities/user.entity';
 import { Product } from './entities/product.entity';
@@ -46,12 +47,13 @@ export class SeedService implements OnApplicationBootstrap {
     this.logger.log('数据库为空，开始写入演示数据…');
 
     // === 用户 ===
+    const demoHash = await bcrypt.hash('demo', 10);
     const users = await this.users.save([
-      { id: 1, username: 'boss',      full_name: '梁总',   role: 'boss',      default_commission_rate: 0,   phone: '13800000001' },
-      { id: 2, username: 'finance',   full_name: '陈会计', role: 'finance',   default_commission_rate: 0,   phone: '13800000002' },
-      { id: 3, username: 'warehouse', full_name: '黄仓管', role: 'warehouse', default_commission_rate: 0,   phone: '13800000003' },
-      { id: 4, username: 'sales01',   full_name: '李业务', role: 'sales',     default_commission_rate: 3,   phone: '13800000004' },
-      { id: 5, username: 'sales02',   full_name: '王业务', role: 'sales',     default_commission_rate: 2.5, phone: '13800000005' },
+      { id: 1, username: 'boss',      full_name: '梁总',   role: 'boss',      default_commission_rate: 0,   phone: '13800000001', password_hash: demoHash },
+      { id: 2, username: 'finance',   full_name: '陈会计', role: 'finance',   default_commission_rate: 0,   phone: '13800000002', password_hash: demoHash },
+      { id: 3, username: 'warehouse', full_name: '黄仓管', role: 'warehouse', default_commission_rate: 0,   phone: '13800000003', password_hash: demoHash },
+      { id: 4, username: 'sales01',   full_name: '李业务', role: 'sales',     default_commission_rate: 3,   phone: '13800000004', password_hash: demoHash },
+      { id: 5, username: 'sales02',   full_name: '王业务', role: 'sales',     default_commission_rate: 2.5, phone: '13800000005', password_hash: demoHash },
     ]);
 
     // === 产品 ===

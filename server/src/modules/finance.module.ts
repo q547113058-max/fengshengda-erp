@@ -49,10 +49,58 @@ class FinanceController {
     return this.txRepo.save(this.txRepo.create(body as any));
   }
 
+  // 物理删除 — 已禁用（数据完整性优先）
   @Delete('transactions/:id')
-  async removeTx(@Param('id', ParseIntPipe) id: number) {
-    await this.txRepo.delete(id);
-    return { ok: true };
+  @ApiOperation({ summary: '物理删除（已禁用）' })
+  async removeTx(@Param('id', ParseIntPipe) _id: number) {
+    throw new BadRequestException('财务流水不允许物理删除，请用 POST /:id/reverse 反冲');
+  }
+
+  // 反冲流水 — 写反向 Tx + 回滚 source 单的 paid/received + 标原 Tx cancelled
+  @Post('transactions/:id/reverse')
+  @ApiOperation({ summary: '反冲流水（写反向 Tx + 重算 source 单 settle_status）' })
+  async reverseTx(@Param('id', ParseIntPipe) id: number, @Body() body: { reason?: string }) {
+    return this.txRepo.manager.transaction(async mgr => {
+      const orig = await mgr.findOne(PaymentTransaction, { where: { id } });
+      if (!orig) throw new NotFoundException('流水不存在');
+      if (orig.status === 'reversed') throw new BadRequestException('该流水已反冲');
+      // 写反向
+      const reverse = await mgr.save(mgr.create(PaymentTransaction, {
+        account_id: orig.account_id,
+        direction: orig.direction === 'in' ? 'out' : 'in',
+        amount: orig.amount,
+        source_type: `${orig.source_type}_reverse` as any,
+        ref_order_id: orig.ref_order_id,
+        ref_order_no: `RV-${orig.ref_order_no || orig.id}`,
+        counter_party: orig.counter_party,
+        operator_id: orig.operator_id,
+        remark: `反冲 #${orig.id} (${body.reason || orig.remark || ''})`,
+      }));
+      // 标原 Tx 为 reversed
+      await mgr.update(PaymentTransaction, id, {
+        status: 'reversed',
+        reversed_by_tx_id: reverse.id,
+      });
+      // 重算 source 单的 paid/received + settle_status
+      if (orig.source_type === 'purchase' && orig.ref_order_id) {
+        const po = await mgr.findOne('purchase_orders' as any, { where: { id: orig.ref_order_id } } as any) as any;
+        if (po) {
+          const newPaid = Math.max(0, po.paid_amount - orig.amount);
+          const total = po.qty * po.cost_price;
+          const newStatus = newPaid === 0 ? 'unpaid' : newPaid >= total ? 'done' : 'partial';
+          await mgr.update('purchase_orders' as any, po.id, { paid_amount: newPaid, settle_status: newStatus });
+        }
+      } else if (orig.source_type === 'sale' && orig.ref_order_id) {
+        const so = await mgr.findOne('sales_orders' as any, { where: { id: orig.ref_order_id } } as any) as any;
+        if (so) {
+          const newReceived = Math.max(0, so.received_amount - orig.amount);
+          const total = so.qty * so.sale_price;
+          const newStatus = newReceived === 0 ? 'unpaid' : newReceived >= total ? 'done' : 'partial';
+          await mgr.update('sales_orders' as any, so.id, { received_amount: newReceived, receive_status: newStatus });
+        }
+      }
+      return { ok: true, reversed: reverse };
+    });
   }
 }
 

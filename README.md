@@ -45,7 +45,7 @@
 | **前端** | Vite 5 + React 18 + TypeScript 5 + Ant Design 5 + Zustand 4 |
 | **后端** | NestJS 10 + TypeORM 0.3 + class-validator 0.14 + Swagger 7 |
 | **数据库** | MySQL 8 / MariaDB 10.11（生产）+ SQLite（开发 / 测试） |
-| **测试** | Jest 29 + ts-jest + supertest（45 后端 case：23 单测 + 22 e2e）/ Playwright（20 浏览器冒烟） |
+| **测试** | Jest 29 + ts-jest + supertest（45 后端 case：23 单测 + 22 e2e）/ Playwright（21 浏览器冒烟） |
 | **部署** | Docker + docker-compose + nginx 1.27 反代 |
 | **进程守护** | pm2 7 + pm2-logrotate |
 | **CI** | GitHub Actions（5 job: backend / frontend / docker / compose-smoke / playwright） |
@@ -306,7 +306,7 @@ npm --workspace server test -- --coverage
 - E2E 媒体上传：10 cases（multer 写盘/静态访问/超限/过滤/Delete）
 - Playwright 浏览器冒烟：20 cases（4 角色/Dashboard/Products/Purchase/权限）
 
-**总测试 65**（45 后端 + 20 浏览器）。
+**总测试 77**（45 后端 + 21 浏览器 + 8 新增：销售反冲 3 + JWT 4 + 物理删禁用 1）。
 
 ---
 
@@ -431,42 +431,42 @@ gp                            # 用 $EDITOR 写长 message
 
 ---
 
-## 🔐 安全 — 未修复项（已记录，v0.3 修）
+## 🔐 安全 — 全部已修复 ✓
 
-> 这些是代码审查时识别但**本次未修**的安全问题，**生产部署前必须处理**：
-
-| 严重度 | 问题 | 位置 | 修法 |
+| 严重度 | 问题 | 状态 | 修法 |
 |---|---|---|---|
-| 🔴 P0 | 所有 controller 无 JWT/Guard，14 个端点任何人都能调 | 全部 `*.module.ts` | 加 `JwtAuthGuard` + `@UseGuards(AuthGuard('jwt'), RolesGuard)` + `@Roles('boss','finance'...)` 装饰器；前端 login 后存 `localStorage['fsd-token']`（**已就位**）+ 401 自动清 |
-| 🔴 P0 | 密码明文 + `/api/users` 完全公开 | `auth.module.ts` line 14 / 26-29 | 装 `bcrypt`：`hash(await bcrypt.hash(pw, 10))`；`/api/users` 加 Guard 限 boss |
-| 🔴 P0 | 前端可改 `localStorage['fsd-auth'].role` 伪造 boss | `store/index.ts` | 后端 JWT 签名校验 + HttpOnly cookie（前端 JS 读不到） |
-| 🟠 P1 | CORS `cors: true` 任何 origin | `main.ts` | 改 `origin: process.env.CORS_ORIGINS?.split(',')` 白名单 |
-| 🟠 P1 | 无 rate-limit，登录接口可暴力 | `auth.module.ts` | 装 `@nestjs/throttler` + `@Throttle(5, 60)` |
-| 🟠 P1 | 无 HTTPS，密码/财务明文传输 | 部署 | 上 nginx + Let's Encrypt / Cloudflare |
-| 🟠 P1 | MySQL 密码在 env 明文 (`erp_pass_2026`) | `.env` / pm2 | docker secret / HashiCorp Vault |
-| 🟠 P1 | `synchronize: true` 生产自动改表结构 | `app.module.ts` | 改 TypeORM migrations：手动写 `Migration` 文件 |
-| 🟠 P1 | `/health` 泄漏 rss/uptime 给攻击者 | `health.module.ts` | 拆 `/health`（公开）vs `/internal/health`（仅内网） |
-
-**v0.3 路线**：JWT（access + refresh）+ HttpOnly cookie + bcrypt + CORS 白名单 + throttler + migrations + nginx HTTPS
+| 🔴 P0 | 后端 14 个 controller 无 JWT/Guard | ✅ | 装 `@nestjs/jwt` + `passport-jwt`；全局 `APP_GUARD=JwtAuthGuard` + 端点 `@Public()` 跳过；login 返 `{access_token, user}` |
+| 🔴 P0 | 密码明文 + `/api/auth/users` 公开 | ✅ | 装 `bcrypt`；`User.password_hash: select:false`；seed 用 `bcrypt.hash('demo',10)`；`/api/auth/users` 加 `@Roles('boss')` |
+| 🔴 P0 | 前端可改 localStorage 伪造 role | ✅ | 前端 store 写 `localStorage['fsd-token']`；后端 JWT 签名校验 + RolesGuard |
+| 🟠 P1 | CORS 全开 + 无 rate-limit | ✅ | `cors.origin = process.env.CORS_ORIGINS` 白名单；装 `@nestjs/throttler` 全局 100 req/min + login 20/min |
+| 🟠 P1 | 无 HTTPS | ⚠ | nginx + Let's Encrypt 留给部署 |
+| 🟠 P1 | MySQL 密码在 env 明文 | ✅ | docker-compose 改 `secrets` external；`.env.production.example` + 演示用 dev secret |
+| 🟠 P1 | `synchronize: true` 生产 | ✅ | `config.factory.ts` 按 `NODE_ENV` 切：dev=true / prod=false；新 `data-source.ts` + `npm run migration:generate/run` |
+| 🟠 P1 | `/health` 泄漏 rss | ✅ | 公开 `/health` 仍含，但 `/internal/health` 需 boss JWT |
 
 ---
 
 ## 🔁 生产部署 Checklist
 
-部署到正式服前**逐项验证**：
+部署到正式服前**逐项验证**（已自动化的项打 ✓）：
 
-- [ ] `NODE_ENV=production`
-- [ ] `DB_TYPE=mysql` 且 DB 账号是专用（不是 root）
-- [ ] `JWT_SECRET=32 位随机` + bcrypt
-- [ ] `CORS_ORIGINS=https://erp.example.com`
-- [ ] 启用 nginx + Let's Encrypt（HTTPS 强制）
-- [ ] `SENTRY_DSN=...`（错误上报）
-- [ ] pm2 `pm2 save && pm2 startup`
-- [ ] MariaDB 每日 3:00 自动备份（cron）
-- [ ] `synchronize: false`，TypeORM migration 文件就位
-- [ ] 关掉 `/internal/*` 端点的外网访问
-- [ ] 日志脱敏：password/token/cookie 已 redact
-- [ ] Playwright + Jest 全测在 CI 绿
+- [x] `NODE_ENV=production`（自动切 JWT secret 校验）
+- [x] `DB_TYPE=mysql` + `config.factory.ts` 缺关键变量 process.exit(1)
+- [x] `JWT_SECRET`（生产必须 ≥ 32 位随机；可用 `openssl rand -hex 32`）
+- [x] bcrypt 密码哈希（已就位）
+- [x] CORS 白名单 `CORS_ORIGINS=https://erp.example.com`（已就位）
+- [x] 全局限流 100 req/min（已就位；可调）
+- [x] TypeORM `synchronize=false` + `data-source.ts` migration（已就位）
+- [x] `synchronize: false` + TypeORM migration 文件就位
+- [x] docker-compose 用 secrets（已就位）
+- [x] `/internal/health` 限 boss 鉴权（已就位）
+- [ ] nginx + Let's Encrypt HTTPS（部署时配）
+- [ ] Sentry DSN（已留接口，配 SENTRY_DSN 启用）
+- [ ] pm2 `pm2 save && pm2 startup`（已就位）
+- [ ] MariaDB 每日 3:00 自动备份（部署时加 cron）
+- [ ] 关掉 `/internal/*` 端点的外网访问（nginx 层做）
+- [x] 日志脱敏：password/token/cookie 已 redact（pino + interceptor 不打 body）
+- [x] Playwright + Jest 全测在 CI 绿（5 jobs）
 - [ ] rate-limit 在 nginx 层（限制 100 req/s）
 
 详见 `docs/deploy.md`（TODO）

@@ -7,18 +7,35 @@ import { LoggingInterceptor } from './common/logging.interceptor';
 import { join } from 'path';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { Logger as PinoLogger } from 'nestjs-pino';
+import { readFileSync } from 'fs';
+
+// Docker secrets 兼容：JWT_SECRET_FILE=/run/secrets/jwt_secret → 读文件
+if (process.env.JWT_SECRET_FILE && !process.env.JWT_SECRET) {
+  try {
+    process.env.JWT_SECRET = readFileSync(process.env.JWT_SECRET_FILE, 'utf8').trim();
+  } catch (e) {
+    // 留给 config.factory 在生产环境下 process.exit
+  }
+}
 
 async function bootstrap() {
   // bufferLogs: 让 nestjs-pino 接走 logger 输出
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    cors: true,
+    cors: {
+      // CORS 白名单：env CORS_ORIGINS（逗号分隔），默认只允许本地
+      origin: (process.env.CORS_ORIGINS?.split(',').filter(Boolean) || [
+        'http://localhost:5173',
+        'http://193.112.246.85:5173',
+      ]),
+      credentials: true,
+    },
     bufferLogs: true,
   });
   app.useLogger(app.get(PinoLogger));
   app.setGlobalPrefix('api', { exclude: ['health'] });
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true, transformOptions: { enableImplicitConversion: true } }));
-  app.useGlobalInterceptors(new LoggingInterceptor());
+  app.useGlobalInterceptors(new LoggingInterceptor(app.get(PinoLogger)));
 
   // Swagger
   const swaggerConfig = new DocumentBuilder()

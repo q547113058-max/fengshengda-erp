@@ -3,12 +3,20 @@ import { Module, Controller, Get, Inject } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
+import { SkipThrottle } from '@nestjs/throttler';
+import { JwtAuthGuard } from '../common/jwt-auth.guard';
+import { UseGuards } from '@nestjs/common';
+import { Roles } from '../common/roles.decorator';
+import { RolesGuard } from '../common/roles.guard';
+import { Public } from '../common/public.decorator';
 
 @ApiTags('健康')
 @Controller()
+@SkipThrottle()   // 健康检查不限流
 class HealthController {
   constructor(@InjectDataSource() private ds: DataSource) {}
 
+  @Public()
   @Get('health')
   async health() {
     const dbOk = this.ds.isInitialized;
@@ -38,6 +46,14 @@ class HealthController {
       sentry: !!process.env.SENTRY_DSN,
       nodeEnv: process.env.NODE_ENV || 'development',
     };
+  }
+
+  // 内部健康端点 — 仅 boss 可看（带内存/启动时间详细）
+  @Get('internal/health')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('boss')
+  async internal() {
+    return this.health();
   }
 }
 

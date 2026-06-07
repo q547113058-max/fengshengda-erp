@@ -1,11 +1,14 @@
 version: '3.9'
 
 # 丰晟达 ERP 一键起：MySQL + NestJS 后端 + 前端（nginx 反代 + SPA）
-# 启动：docker compose up -d
-# 访问：http://localhost:8080
-# 后端 API：http://localhost:8080/api
-# Swagger 文档：http://localhost:8080/api/docs
-# 演示账号：boss / demo (其它同 README)
+# 启动：docker compose --env-file .env.production up -d
+# 访问：https://erp.example.com
+#
+# 密码用 docker secrets，不写在 compose 文件里
+# secrets 通过 external: true 引用，部署时从 vault 注入：
+#   echo "your-secret" | docker secret create db_root_password -
+#   echo "your-secret" | docker secret create db_user_password -
+#   echo "your-32-char-random" | docker secret create jwt_secret -
 
 services:
   mysql:
@@ -13,25 +16,29 @@ services:
     container_name: fengshengda-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass_2026
-      MYSQL_DATABASE: fengshengda_erp
-      MYSQL_USER: erp_user
-      MYSQL_PASSWORD: erp_pass_2026
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      # secrets → 文件路径（容器内）
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/db_root_password
+      MYSQL_PASSWORD_FILE: /run/secrets/db_user_password
       TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
-      - --default-time-zone=+08:00
+      - --default-time-time=+08:00
     volumes:
       - mysql_data:/var/lib/mysql
-    ports:
-      # 主机可直接连 3306 (开发调试用)；生产可去掉
-      - "3306:3306"
+    # 不再 3306 公开到主机（生产内网即可）
+    expose:
+      - "3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "erp_user", "-perp_pass_2026"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "${DB_USER}", "-p$(cat /run/secrets/db_user_password)"]
       interval: 10s
       timeout: 5s
       retries: 10
+    secrets:
+      - db_root_password
+      - db_user_password
 
   server:
     build:
@@ -44,27 +51,32 @@ services:
       PORT: 3003
       DB_HOST: mysql
       DB_PORT: 3306
-      DB_USER: erp_user
-      DB_PASS: erp_pass_2026
-      DB_NAME: fengshengda_erp
+      DB_USER: ${DB_USER}
+      DB_NAME: ${DB_NAME}
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      CORS_ORIGINS: ${CORS_ORIGINS}
     depends_on:
       mysql:
         condition: service_healthy
     volumes:
       - server_uploads:/app/uploads
-    ports:
-      - "3003:3003"
+    expose:
+      - "3003"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3003/health"]
       interval: 15s
       timeout: 3s
       retries: 5
       start_period: 30s
+    secrets:
+      - jwt_secret
 
   frontend:
     build:
       context: .
       dockerfile: frontend/Dockerfile
+    args:
+      VITE_API_BASE: /api
     container_name: fengshengda-frontend
     restart: unless-stopped
     depends_on:
@@ -83,3 +95,15 @@ volumes:
     driver: local
   server_uploads:
     driver: local
+
+secrets:
+  # 外部注入：docker secret create <name> -
+  db_root_password:
+    external: true
+    name: fsd_db_root_password
+  db_user_password:
+    external: true
+    name: fsd_db_user_password
+  jwt_secret:
+    external: true
+    name: fsd_jwt_secret

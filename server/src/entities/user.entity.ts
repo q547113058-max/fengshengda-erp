@@ -16,8 +16,8 @@ export class User {
   @Column({ name: 'full_name', length: 100 })
   full_name: string;
 
-  // 演示版：明文存 demo，正式生产请换 bcrypt
-  @Column({ name: 'password_hash', length: 255, default: 'demo' })
+  // bcrypt hash（select: false — 默认 find 拿不到；如要查显式 addSelect）
+  @Column({ name: 'password_hash', length: 255, select: false })
   password_hash: string;
 
   @Column({ length: 20 })

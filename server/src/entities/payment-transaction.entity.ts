@@ -3,7 +3,7 @@ import { PaymentAccount } from './payment-account.entity';
 import { User } from './user.entity';
 
 export type Direction = 'in' | 'out';
-export type SourceType = 'purchase' | 'sale' | 'commission' | 'manual';
+export type SourceType = 'purchase' | 'sale' | 'commission' | 'manual' | 'purchase_reverse' | 'sale_reverse' | 'commission_reverse';
 
 @Entity('payment_transactions')
 export class PaymentTransaction {
@@ -47,4 +47,12 @@ export class PaymentTransaction {
 
   @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
+
+  // 反冲标记：'active' | 'reversed'
+  @Column({ length: 20, default: 'active' })
+  status: 'active' | 'reversed';
+
+  // 如果是反冲生成的反向 Tx，指向原 Tx
+  @Column({ name: 'reversed_by_tx_id', nullable: true })
+  reversed_by_tx_id: number;
 }

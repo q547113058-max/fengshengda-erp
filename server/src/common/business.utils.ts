@@ -1,4 +1,6 @@
 // 业务工具函数 — 收银状态 / 编号生成
+import { EntityManager } from 'typeorm';
+import { OrderSequence } from '../entities/order-sequence.entity';
 
 export type SettleStatus = 'unpaid' | 'partial' | 'done';
 
@@ -15,17 +17,48 @@ export function calcSettleStatus(paid: number, total: number): SettleStatus {
 }
 
 /**
- * 业务订单号生成（防并发重号）
+ * 业务订单号生成 — 用独立序列表 + 行锁保证并发安全
  * 规则：PO/SO + YYMMDD + 3 位序号
- * 在事务内调用：先 SELECT MAX(id) + 1（行锁保证串行）
+ *
+ * 并发安全：
+ * 1. SELECT ... FOR UPDATE 锁 order_sequences 行
+ * 2. UPDATE last_seq = last_seq + 1
+ * 3. 返回 prefix + ymd + 3 位
+ *
+ * MySQL 用 pessimistic_write 锁；SQLite 整个库是单锁（事务串行）
  */
-export async function genOrderNo<T extends { id: number }>(
-  repo: { find: (opts?: any) => Promise<T[]> },
+export async function genOrderNo(
+  mgr: EntityManager,
   prefix: 'PO' | 'SO',
   date: string,
 ): Promise<string> {
-  const rows = (await repo.find({ select: ['id'], order: { id: 'DESC' }, take: 1 } as any)) as T[];
-  const nextId = (rows[0]?.id ?? 0) + 1;
-  const yy = date.replace(/-/g, '').slice(2);
-  return `${prefix}${yy}-${String(nextId).padStart(3, '0')}`;
+  const yy = date.replace(/-/g, '').slice(2); // YYMMDD
+  const isMySQL = mgr.connection.options.type === 'mysql';
+
+  // 1. 取行（带锁或 upsert）
+  let row = isMySQL
+    ? await mgr.findOne(OrderSequence, {
+        where: { prefix, ymd: yy },
+        lock: { mode: 'pessimistic_write' },
+      })
+    : await mgr.findOne(OrderSequence, { where: { prefix, ymd: yy } });
+
+  if (!row) {
+    // 第一次：初始化 last_seq = 1
+    try {
+      row = await mgr.save(
+        mgr.create(OrderSequence, { prefix, ymd: yy, last_seq: 1 }),
+      );
+    } catch {
+      // 并发：别的 tx 先 insert 了，重试
+      row = await mgr.findOneOrFail(OrderSequence, { where: { prefix, ymd: yy } });
+    }
+    return `${prefix}${yy}-${String(row.last_seq).padStart(3, '0')}`;
+  }
+
+  // 2. 已有：last_seq + 1
+  row.last_seq += 1;
+  await mgr.save(OrderSequence, row);
+  return `${prefix}${yy}-${String(row.last_seq).padStart(3, '0')}`;
 }
+

@@ -46,7 +46,7 @@ class SalesController {
 
       // 2. 编号
       const date = body.sale_date || new Date().toISOString().slice(0, 10);
-      const so_no = await genOrderNo(mgr.getRepository(SalesOrder), 'SO', date);
+      const so_no = await genOrderNo(mgr, 'SO', date);
 
       // 3. 计算金额
       const total = body.qty * body.sale_price;
@@ -123,11 +123,20 @@ class SalesController {
   }
 
   @Put(':id')
-  @ApiOperation({ summary: '更新销售单（自动重算 receive_status）' })
+  @ApiOperation({ summary: '更新销售单（仅改备注/收款/佣金率；已收款不可改 qty/price）' })
   async update(@Param('id', ParseIntPipe) id: number, @Body() body: UpdateSalesDto) {
     return this.ds.transaction(async mgr => {
       const cur = await mgr.findOne(SalesOrder, { where: { id } });
       if (!cur) throw new NotFoundException();
+      // 已收款（received_amount > 0）→ 禁改 qty/price/batch_id
+      if (cur.received_amount > 0) {
+        const { qty, sale_price, batch_id, customer_id, product_id, tax_rate, sale_date } = body;
+        if (qty !== undefined || sale_price !== undefined || batch_id !== undefined
+            || customer_id !== undefined || product_id !== undefined
+            || tax_rate !== undefined || sale_date !== undefined) {
+          throw new BadRequestException('已收款的销售单不可改 数量/单价/批次/客户/产品/税率/日期，请走"反冲"流程');
+        }
+      }
       const merged = { ...cur, ...body };
       const total = merged.qty * merged.sale_price;
       const newStatus = calcSettleStatus(merged.received_amount, total);
@@ -138,22 +147,79 @@ class SalesController {
         receive_status: newStatus,
         commission_amt: commissionAmt,
       });
+      // 同步佣金记录
+      const commRecord = await mgr.findOne(CommissionRecord, { where: { sales_order_id: id } });
+      if (commRecord && !['paid'].includes(commRecord.settle_status)) {
+        await mgr.update(CommissionRecord, commRecord.id, { amount: commissionAmt, rate: merged.commission_rate || 0 });
+      }
       return mgr.findOne(SalesOrder, { where: { id } });
     });
   }
 
-  @Delete(':id')
-  async remove(@Param('id', ParseIntPipe) id: number) {
+  // 反冲 — 推荐做法（保留历史 + 恢复库存 + 撤销流水）
+  @Post(':id/reverse')
+  @ApiOperation({ summary: '反冲销售单（恢复库存 + 写反向流水 + 撤销佣金 + 标 cancelled）' })
+  async reverse(@Param('id', ParseIntPipe) id: number, @Body() body: { reason?: string }) {
     return this.ds.transaction(async mgr => {
-      const txCount = await mgr.count(PaymentTransaction, {
+      const cur = await mgr.findOne(SalesOrder, { where: { id } });
+      if (!cur) throw new NotFoundException();
+      if (cur.status === 'cancelled') {
+        throw new BadRequestException('该销售单已反冲');
+      }
+      // 1. 恢复批次库存
+      await mgr.increment(InventoryBatch, { id: cur.batch_id }, 'qty_remaining', cur.qty);
+      const batch = await mgr.findOne(InventoryBatch, { where: { id: cur.batch_id } });
+      await mgr.update(InventoryBatch, cur.batch_id, {
+        status: batch?.qty_remaining === batch?.qty_total ? 'in_stock' : 'in_stock',
+      });
+      // 2. 写反向库存流水（return 类型）
+      await mgr.save(mgr.create(InventoryMovement, {
+        batch_id: cur.batch_id,
+        type: 'return',
+        qty: cur.qty,
+        operator: 'system-reverse',
+        to_holder: '返库',
+        ref_order_no: `RV-${cur.so_no}`,
+        remark: body.reason || `反冲 ${cur.so_no}`,
+      }));
+      // 3. 撤销佣金（设 cancelled）
+      await mgr.update(CommissionRecord,
+        { sales_order_id: id, settle_status: 'pending' } as any,
+        { settle_status: 'cancelled' } as any,
+      );
+      // 4. 写反向收款（如果有）
+      const txs = await mgr.find(PaymentTransaction, {
         where: { source_type: 'sale', ref_order_id: id },
       });
-      if (txCount > 0) {
-        throw new BadRequestException('已有关联收款流水，不能删除。请先反冲。');
+      for (const tx of txs) {
+        await mgr.save(mgr.create(PaymentTransaction, {
+          account_id: tx.account_id,
+          direction: tx.direction === 'in' ? 'out' : 'in',
+          amount: tx.amount,
+          source_type: 'sale_reverse',
+          ref_order_id: id,
+          ref_order_no: `RV-${cur.so_no}`,
+          counter_party: tx.counter_party,
+          operator_id: tx.operator_id,
+          remark: `反冲 ${cur.so_no} (${tx.remark || ''})`,
+        }));
       }
-      await mgr.delete(SalesOrder, id);
-      return { ok: true };
+      // 5. 标 cancelled + 清零
+      await mgr.update(SalesOrder, id, {
+        status: 'cancelled',
+        received_amount: 0,
+        receive_status: 'unpaid',
+        remark: `${cur.remark || ''} | 反冲: ${body.reason || '无原因'}`,
+      });
+      return { ok: true, id, status: 'cancelled' };
     });
+  }
+
+  // 物理删除 — 已禁用，强制走反冲
+  @Delete(':id')
+  @ApiOperation({ summary: '物理删除（已禁用，请用 /reverse）' })
+  async remove(@Param('id', ParseIntPipe) _id: number) {
+    throw new BadRequestException('物理删除已禁用，请用 POST /:id/reverse 反冲。数据完整性优先。');
   }
 
   // 收款

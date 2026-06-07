@@ -1,5 +1,11 @@
 import { Module, Global } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { buildTypeOrmConfig, buildJwtSecret, ALL_ENTITIES } from './config.factory';
+import { JwtModule } from '@nestjs/jwt';
+import { JwtAuthGuard } from './common/jwt-auth.guard';
+
 import { User } from './entities/user.entity';
 import { Product } from './entities/product.entity';
 import { ProductPrice } from './entities/product-price.entity';
@@ -13,6 +19,7 @@ import { SalesOrder } from './entities/sales-order.entity';
 import { CommissionRecord } from './entities/commission-record.entity';
 import { PaymentAccount } from './entities/payment-account.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
+import { OrderSequence } from './entities/order-sequence.entity';
 
 import { AuthModule } from './modules/auth.module';
 import { ProductsModule } from './modules/products.module';
@@ -30,40 +37,24 @@ import { SeedModule } from './modules/seed.module';
 import { HealthModule } from './modules/health.module';
 import { LoggingModule } from './common/logging.module';
 
-const ALL_ENTITIES = [
-  User, Product, ProductPrice, Supplier, PurchaseOrder,
-  InventoryBatch, InventoryMovement, MediaAsset, Customer,
-  SalesOrder, CommissionRecord, PaymentAccount, PaymentTransaction,
-];
-
 @Global()
 @Module({
   imports: [
     TypeOrmModule.forFeature(ALL_ENTITIES),
+    JwtModule.register({
+      secret: buildJwtSecret(),
+      signOptions: { expiresIn: '8h' },
+    }),
   ],
-  exports: [TypeOrmModule],
+  exports: [TypeOrmModule, JwtModule],
 })
 export class GlobalRepositoryModule {}
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: (process.env.DB_TYPE as any) || 'mysql',
-      ...(process.env.DB_TYPE === 'better-sqlite3' || !process.env.DB_TYPE
-        ? { database: process.env.DB_PATH || (process.env.NODE_ENV === 'test' ? ':memory:' : 'erp.db') }
-        : {
-            host: process.env.DB_HOST || 'localhost',
-            port: Number(process.env.DB_PORT || 3306),
-            username: process.env.DB_USER || 'erp_user',
-            password: process.env.DB_PASS || 'erp_pass_2026',
-            database: process.env.DB_NAME || 'fengshengda_erp',
-            charset: 'utf8mb4',
-            timezone: '+08:00',
-          }),
-      entities: ALL_ENTITIES,
-      synchronize: true,        // 演示版：自动建表；生产请用 migrations
-      logging: ['error', 'warn'],
-    }),
+    TypeOrmModule.forRoot(buildTypeOrmConfig()),
+    // 限流：默认 100 req/min（演示环境 + 防暴力不太严；生产可调）
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     GlobalRepositoryModule,
     AuthModule,
     ProductsModule,
@@ -80,6 +71,12 @@ export class GlobalRepositoryModule {}
     SeedModule,
     HealthModule,
     LoggingModule,
+  ],
+  providers: [
+    // 全局 JWT 鉴权（端点可 @Public() 跳过）
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    // 全局限流（公开端点如 /health 不限流可在端点 @SkipThrottle）
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })
 export class AppModule {}

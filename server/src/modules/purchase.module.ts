@@ -34,7 +34,7 @@ class PurchaseController {
     return this.ds.transaction(async mgr => {
       // 1. 编号（count + 1 在事务内并发安全 — 同一事务拿同一快照）
       const date = body.purchase_date || new Date().toISOString().slice(0, 10);
-      const po_no = await genOrderNo(mgr.getRepository(PurchaseOrder), 'PO', date);
+      const po_no = await genOrderNo(mgr, 'PO', date);
 
       // 2. 校验供应商存在
       const supplier = await mgr.findOne(Supplier, { where: { id: body.supplier_id } });

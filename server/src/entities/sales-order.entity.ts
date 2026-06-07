@@ -68,4 +68,8 @@ export class SalesOrder {
 
   @Column({ type: 'text', nullable: true })
   remark: string;
+
+  // 反冲标记：'active' | 'cancelled'
+  @Column({ length: 20, default: 'active' })
+  status: 'active' | 'cancelled';
 }

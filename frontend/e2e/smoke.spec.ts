@@ -180,8 +180,20 @@ test.describe('后端健康检查（/health 直连）', () => {
     expect(body.db.status).toBe('up');
   });
 
-  test('GET /api/products 200 + 6 SKU', async ({ request }) => {
+  test('GET /api/products 未带 token → 401（需 token 才能访问）', async ({ request }) => {
     const res = await request.get('http://localhost:3003/api/products');
+    expect(res.status()).toBe(401);
+  });
+
+  test('GET /api/products 带 token → 200 + 6 SKU', async ({ request, page }) => {
+    // 先登录拿 token
+    const loginRes = await request.post('http://localhost:3003/api/auth/login', {
+      data: { username: 'boss', password: 'demo' },
+    });
+    const { access_token } = await loginRes.json();
+    const res = await request.get('http://localhost:3003/api/products', {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
     expect(res.status()).toBe(200);
     const body = await res.json();
     expect(body.length).toBe(6);

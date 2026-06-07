@@ -35,7 +35,9 @@ export const useAuth = create<AuthState>()(
       login: async (username, password) => {
         set({ loading: true, error: null });
         try {
-          const user = await api.login(username, password);
+          const { access_token, user } = await api.login(username, password);
+          // 存 token 到 localStorage（API client 自动读）
+          try { localStorage.setItem('fsd-token', access_token); } catch { /* ignore */ }
           set({ user, loading: false });
           return true;
         } catch (e: any) {
@@ -43,7 +45,10 @@ export const useAuth = create<AuthState>()(
           return false;
         }
       },
-      logout: () => set({ user: null }),
+      logout: () => {
+        try { localStorage.removeItem('fsd-token'); } catch { /* ignore */ }
+        set({ user: null });
+      },
       setHydrated: (v) => set({ _hydrated: v }),
     }),
     {
