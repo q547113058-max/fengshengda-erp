@@ -45,10 +45,10 @@
 | **前端** | Vite 5 + React 18 + TypeScript 5 + Ant Design 5 + Zustand 4 |
 | **后端** | NestJS 10 + TypeORM 0.3 + class-validator 0.14 + Swagger 7 |
 | **数据库** | MySQL 8 / MariaDB 10.11（生产）+ SQLite（开发 / 测试） |
-| **测试** | Jest 29 + ts-jest + supertest（23 unit + 12 e2e） |
+| **测试** | Jest 29 + ts-jest + supertest（45 后端 case：23 单测 + 22 e2e）/ Playwright（20 浏览器冒烟） |
 | **部署** | Docker + docker-compose + nginx 1.27 反代 |
 | **进程守护** | pm2 7 + pm2-logrotate |
-| **CI** | GitHub Actions（4 job: backend / frontend / docker / compose-smoke） |
+| **CI** | GitHub Actions（5 job: backend / frontend / docker / compose-smoke / playwright） |
 | **依赖更新** | Dependabot（每周自动 PR） |
 
 ---
@@ -284,40 +284,29 @@ DTO 验证规则：
 ## ✅ 测试
 
 ```bash
-# 全部 35 测试（单测 23 + e2e 12）
-cd server
-npx jest --config jest.config.js
+# 后端单测（23 DTO 验证）
+npm run test
 
-# 单测
-npx jest --config jest.config.js dto/
+# 后端 e2e（12 业务流 + 10 媒体上传 = 22 cases，隔离 SQLite 库）
+npm run test:e2e
 
-# e2e（用隔离 SQLite 库，自动清理）
-npx jest --config jest.config.js e2e/
+# 一次跑全部 45
+npm --workspace server test
+
+# Playwright 浏览器冒烟（20 cases，前提：pm2 启着 vite + nest）
+npm --workspace frontend run e2e:playwright
 
 # 覆盖率
-npx jest --config jest.config.js --coverage
-
-# 一次性跑（带 sqlite 隔离）
-cd .. && npm test
+npm --workspace server test -- --coverage
 ```
 
 **测试矩阵**（全部通过）：
-```
-✓ DTO 验证：23 cases
-  - 必填 / 枚举 / 类型 / 越界 / 未知字段拦截
+- DTO 验证：23 cases（必填/枚举/类型/越界/未知字段拦截）
+- E2E 业务流：12 cases（登录/采购级联/销售扣减/佣金/结算）
+- E2E 媒体上传：10 cases（multer 写盘/静态访问/超限/过滤/Delete）
+- Playwright 浏览器冒烟：20 cases（4 角色/Dashboard/Products/Purchase/权限）
 
-✓ E2E 业务流：12 cases
-  - 登录（正确密码 201 / 错密码 401）
-  - 采购：自动建批次 + 写 In 流水 + 可选付款 Tx
-  - 采购缺必填 → 400
-  - 采购含未知字段 → 400
-  - 销售：扣减批次 + 写 Out 流水 + 自动建佣金
-  - 超卖（>批次剩余）→ 400
-  - 佣金结算：标 paid + 写 Out 财务 Tx
-  - 重复结算已 paid → 400
-  - 健康检查 GET /health → 200
-  - 仪表盘 KPI → 含全部指标
-```
+**总测试 65**（45 后端 + 20 浏览器）。
 
 ---
 
@@ -366,10 +355,11 @@ docker compose up -d
 
 | Job | 内容 |
 |---|---|
-| **backend** | npm install → tsc --noEmit → 单测（23）→ e2e（12）→ 覆盖率（Codecov） |
+| **backend** | npm install → tsc --noEmit → 单测（23）→ e2e（22）→ 覆盖率（Codecov） |
 | **frontend** | npm install → tsc --noEmit → vite build → 上传 dist artifact |
 | **docker** | buildx 缓存构建 server + frontend 镜像 |
 | **compose-smoke** | docker compose up → 等 3 healthy → curl 7 端点 → 失败拉日志 |
+| **playwright** | 起后端 + vite preview → 装 chromium → 跑 20 浏览器冒烟 → 上传 HTML 报告 |
 
 触发：push 到 main / develop，PR 到 main / develop
 

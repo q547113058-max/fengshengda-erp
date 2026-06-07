@@ -217,10 +217,11 @@ describe('E2E: 完整业务流（登录→采购→销售→佣金结算）', ()
       .expect(400);
   });
 
-  it('健康检查：GET /health → 200', async () => {
+  it('健康检查：GET /health → 200 + status/db 字段', async () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);
     expect(res.body.status).toBe('ok');
-    expect(res.body.db).toBe('better-sqlite3');
+    expect(res.body.db.type).toBe('better-sqlite3');
+    expect(res.body.db.status).toBe('up');
   });
 
   it('仪表盘 KPI：含全部指标', async () => {

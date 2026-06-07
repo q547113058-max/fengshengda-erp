@@ -28,6 +28,7 @@ import { DashboardModule } from './modules/dashboard.module';
 import { UsersModule } from './modules/users.module';
 import { SeedModule } from './modules/seed.module';
 import { HealthModule } from './modules/health.module';
+import { LoggingModule } from './common/logging.module';
 
 const ALL_ENTITIES = [
   User, Product, ProductPrice, Supplier, PurchaseOrder,
@@ -78,6 +79,7 @@ export class GlobalRepositoryModule {}
     UsersModule,
     SeedModule,
     HealthModule,
+    LoggingModule,
   ],
 })
 export class AppModule {}

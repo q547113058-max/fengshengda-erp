@@ -169,3 +169,73 @@ jobs:
       - name: 关停 compose
         if: always()
         run: docker compose down -v
+
+  # ========== Job 5: Playwright 浏览器端 e2e 冒烟 ==========
+  playwright:
+    name: Playwright 浏览器冒烟
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install 根依赖 + workspaces
+        run: npm install --no-audit --no-fund
+
+      - name: 启后端（test 模式，SQLite 隔离库）
+        run: |
+          cd ..
+          cd server
+          DB_TYPE=better-sqlite3 DB_PATH=/tmp/test.db PORT=3003 \
+            nohup npx ts-node-dev --transpile-only src/main.ts > /tmp/server.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://localhost:3003/health > /dev/null; then
+              echo "✅ server ready ($i s)"; break
+            fi
+            sleep 1
+          done
+
+      - name: 启前端 vite preview（serve dist）
+        run: |
+          npx vite build
+          nohup npx vite preview --port 4173 --host 0.0.0.0 > /tmp/frontend.log 2>&1 &
+          for i in {1..30}; do
+            if curl -sf http://localhost:4173/ > /dev/null; then
+              echo "✅ frontend ready ($i s)"; break
+            fi
+            sleep 1
+          done
+
+      - name: 装 Chromium
+        run: npx playwright install --with-deps chromium-headless-shell
+
+      - name: 跑 Playwright 冒烟（20 cases）
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:4173
+          SKIP_WEBSERVER: '1'
+        run: npx playwright test --config=playwright.config.ts
+
+      - name: 上传 Playwright 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: 收尾
+        if: always()
+        run: pkill -f 'ts-node-dev|vite' || true
+

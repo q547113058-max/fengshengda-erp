@@ -22,7 +22,10 @@
     "docker:build": "docker build -t fengshengda-server -f server/Dockerfile . && docker build -t fengshengda-frontend -f frontend/Dockerfile .",
     "compose:up": "docker compose up -d",
     "compose:down": "docker compose down -v",
-    "compose:smoke": "bash scripts/compose-smoke.sh"
+    "compose:smoke": "bash scripts/compose-smoke.sh",
+    "e2e:playwright": "npx playwright test",
+    "e2e:playwright:headed": "npx playwright test --headed",
+    "e2e:playwright:report": "npx playwright show-report"
   },
   "devDependencies": {
     "concurrently": "^9.0.1"
