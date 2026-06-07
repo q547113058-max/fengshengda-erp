@@ -45,7 +45,7 @@
 | **前端** | Vite 5 + React 18 + TypeScript 5 + Ant Design 5 + Zustand 4 |
 | **后端** | NestJS 10 + TypeORM 0.3 + class-validator 0.14 + Swagger 7 |
 | **数据库** | MySQL 8 / MariaDB 10.11（生产）+ SQLite（开发 / 测试） |
-| **测试** | Jest 29 + ts-jest + supertest（45 后端 case：23 单测 + 22 e2e）/ Playwright（21 浏览器冒烟） |
+| **测试** | Jest 29 + ts-jest + supertest（56 后端 case：23 单测 + 23 业务流 + 10 媒体上传）/ Playwright（21 浏览器冒烟） |
 | **部署** | Docker + docker-compose + nginx 1.27 反代 |
 | **进程守护** | pm2 7 + pm2-logrotate |
 | **CI** | GitHub Actions（5 job: backend / frontend / docker / compose-smoke / playwright） |
@@ -541,3 +541,84 @@ pm2 save
 ## 📄 License
 
 UNLICENSED · 内部项目
+
+---
+
+## 🗃️ Database Migration 流程
+
+**演示/开发环境**（默认）：`synchronize: true` → server 启动自动建表 + 触发 seed，**0 手工**。
+
+**生产环境**（`NODE_ENV=production`）：`synchronize: false` → 必须手动用 migration：
+
+```bash
+cd server
+
+# 1. 首次部署：跑全部 migration 建表
+npm run migration:run
+
+# 2. 写 seed 数据（手动或 mysqldump 导入）
+mysqldump -u erp_user -p fengshengda_erp > seed-backup.sql
+mysql -u erp_user -p fengshengda_erp < seed-backup.sql
+
+# 3. 启动 server
+NODE_ENV=production npm run start:prod
+```
+
+**未来 entity 改动**：
+```bash
+# 1. 改 entity 后，跑 generate 自动出 SQL
+npm run migration:generate src/migrations/AddSomethingToTable
+
+# 2. 检查生成的 .ts 文件（typeorm 可能误判，手动修）
+
+# 3. 测试迁移
+npm run migration:run
+
+# 4. 回滚
+npm run migration:revert
+```
+
+**当前 migration 状态**：
+- `1717750000000-InitSchema.ts`（14 张表 + 5 索引建表）— v0.1
+- 未来新增：`YYYYMMDDHHMMSS-Name.ts`
+
+---
+
+## 📦 部署文件清单
+
+| 文件 | 用途 |
+|---|---|
+| `nginx/erp.example.com.conf` | nginx + Let's Encrypt HTTPS 配置（强 HSTS + 内网限 Swagger/Internal） |
+| `scripts/cron-backup.sh` | MariaDB 每日 3:00 全量 dump（保留 14 天）|
+| `docs/sentry.md` | Sentry 接入指南（DSN + 异常捕获 + 性能追踪）|
+| `.env.production.example` | 生产环境变量模板（不含真实密码）|
+
+部署到生产机器：
+
+```bash
+# 1. 拉代码
+git clone https://github.com/q547113058-max/fengshengda-erp.git /data/erp-system
+cd /data/erp-system
+
+# 2. 配 secrets
+cp .env.production.example .env.production
+# 填 JWT_SECRET / DB_PASS / CORS_ORIGINS / SENTRY_DSN 等
+
+# 3. 装 docker secrets
+echo "your_db_root_pass" | docker secret create fsd_db_root_password -
+echo "your_db_user_pass" | docker secret create fsd_db_user_password -
+echo "$(openssl rand -hex 32)" | docker secret create fsd_jwt_secret -
+
+# 4. 启 docker compose
+docker compose --env-file .env.production up -d
+
+# 5. 配 nginx
+sudo cp nginx/erp.example.com.conf /etc/nginx/sites-available/erp
+sudo ln -s /etc/nginx/sites-available/erp /etc/nginx/sites-enabled/
+sudo certbot --nginx -d erp.example.com   # 自动配 HTTPS
+sudo nginx -t && sudo systemctl reload nginx
+
+# 6. 装备份 cron
+sudo cp scripts/cron-backup.sh /etc/cron.daily/erp-backup
+sudo chmod +x /etc/cron.daily/erp-backup
+```

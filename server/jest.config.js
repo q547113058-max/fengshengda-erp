@@ -3,6 +3,8 @@ module.exports = {
   testEnvironment: 'node',
   rootDir: 'src',
   testRegex: '(.*\\.spec\\.ts|.*\\.e2e-spec\\.ts)$',
+  // SQLite 测试库 + 全局 in-memory 容易锁竞争 → 默认 1 worker 串行
+  maxWorkers: 1,
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

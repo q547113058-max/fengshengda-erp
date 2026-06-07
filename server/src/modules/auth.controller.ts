@@ -24,8 +24,8 @@ export class AuthController {
   @Public()
   @Post('login')
   @ApiOperation({ summary: '登录 → 返回 access_token + user' })
-  // 登录限流：20 次/分钟/IP（演示环境放宽；生产建议 5/分钟）
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  // 登录限流：100 次/分钟/IP（演示/测试放宽；生产建议 5/分钟）
+  @Throttle({ default: { limit: 100, ttl: 60_000 } })
   async login(@Body() body: { username: string; password: string }) {
     // addSelect('user.password_hash') 才能拿到，因为 entity 上 select:false
     const u = await this.users

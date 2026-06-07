@@ -53,8 +53,8 @@ export class GlobalRepositoryModule {}
 @Module({
   imports: [
     TypeOrmModule.forRoot(buildTypeOrmConfig()),
-    // 限流：默认 100 req/min（演示环境 + 防暴力不太严；生产可调）
-    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
+    // 限流：默认 1000 req/min（演示/测试环境 + E2E 跑测时高并发；生产可调）
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 1000 }]),
     GlobalRepositoryModule,
     AuthModule,
     ProductsModule,
