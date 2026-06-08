@@ -3,9 +3,8 @@ import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class ProductPriceDto {
-  @ApiProperty({ example: 1, description: '税率 1 或 9' })
-  @IsIn([1, 9], { message: '税率只能 1 或 9' })
-  tax_rate: 1 | 9;
+  @ApiPropertyOptional({ example: 1, description: '税率（可选，自行填写）' })
+  @IsOptional() @IsNumber() tax_rate?: number;
 
   @ApiProperty({ example: 18.8 })
   @IsNumber() @Min(0)
@@ -14,6 +13,10 @@ export class ProductPriceDto {
   @ApiPropertyOptional({ example: '2026-06-01' })
   @IsOptional() @IsString()
   effective_from?: string;
+
+  @ApiPropertyOptional({ example: '1%农副价' })
+  @IsOptional() @IsString()
+  remark?: string;
 }
 
 export class CreateProductDto {
@@ -32,8 +35,8 @@ export class CreateProductDto {
   @ApiPropertyOptional({ example: 'A级' })
   @IsOptional() @IsString() grade?: string;
 
-  @ApiPropertyOptional({ example: 50, default: 1 })
-  @IsOptional() @IsInt() @Min(1) qty_per_unit?: number;
+  @ApiPropertyOptional({ example: 1.5, default: 1 })
+  @IsOptional() @IsNumber() @Min(0.01) qty_per_unit?: number;
 
   @ApiPropertyOptional({ example: '佛山冷库A' })
   @IsOptional() @IsString() goods_location?: string;
@@ -52,13 +55,16 @@ export class UpdateProductDto {
   @IsOptional() @IsString() factory_code?: string;
   @IsOptional() @IsString() spec?: string;
   @IsOptional() @IsString() grade?: string;
-  @IsOptional() @IsInt() @Min(1) qty_per_unit?: number;
+  @IsOptional() @IsNumber() @Min(0.01) qty_per_unit?: number;
   @IsOptional() @IsString() goods_location?: string;
   @IsOptional() @IsString() remark?: string;
+  @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProductPriceDto)
+  prices?: ProductPriceDto[];
 }
 
 export class UpdatePriceDto {
-  @IsOptional() @IsIn([1, 9]) tax_rate?: 1 | 9;
+  @IsOptional() @IsNumber() tax_rate?: number;
   @IsOptional() @IsNumber() @Min(0) price?: number;
   @IsOptional() @IsString() effective_from?: string;
+  @IsOptional() @IsString() remark?: string;
 }

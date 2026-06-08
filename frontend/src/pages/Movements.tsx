@@ -34,19 +34,22 @@ export default function Movements() {
     const p = products.find(x => x.id === b.product_id);
     return p ? `${p.category} · ${p.factory_code}` : `产品#${b.product_id}`;
   };
+  const productIdOfBatch = (id: number) => batches.find(x => x.id === id)?.product_id;
 
   const fields: FieldDef[] = [
     { name: 'batch_id', label: '批次', type: 'select', required: true,
-      options: batches.map(b => ({ value: b.id, label: `${b.batch_no} · ${productOfBatch(b.id)} (剩 ${b.qty_remaining} 箱)` })) },
+      options: batches.map(b => ({ value: b.id, label: `${b.batch_no} · ${productOfBatch(b.id)} (剩 ${b.qty_remaining} 吨)` })) },
     { name: 'type', label: '类型', type: 'select', required: true, options: [
       { value: 'in', label: '入库' }, { value: 'out', label: '出库' },
       { value: 'transfer', label: '调拨' }, { value: 'loss', label: '损耗' }, { value: 'return', label: '退货' },
     ] },
-    { name: 'qty', label: '数量（箱）', type: 'number', required: true, min: 1 },
+    { name: 'qty', label: '数量（吨）', type: 'number', required: true, min: 1 },
     { name: 'operator', label: '操作人', initialValue: '黄仓管' },
     { name: 'to_holder', label: '去向 / 接手人' },
     { name: 'ref_order_no', label: '关联单号' },
     { name: 'remark', label: '备注', type: 'textarea' },
+    { name: 'image', label: '凭证/实物图片', type: 'upload' },
+    { name: 'image_remark', label: '图片备注', placeholder: '如：到货实拍、出库签收照' },
   ];
 
   return (
@@ -95,7 +98,23 @@ export default function Movements() {
         initial={{ type: 'in', qty: 1 }}
         onCancel={() => setModalOpen(false)}
         onSubmit={async (v) => {
-          try { await api.addMovement(v); message.success('已登记'); reload(); } catch (e: any) { message.error(e.message); throw e; }
+          // 1. 创建出入库记录
+          await api.addMovement(v);
+          // 2. 如果有图片，上传并关联
+          if (v.image) {
+            const batchId = v.batch_id;
+            const productId = productIdOfBatch(batchId);
+            // 入库/退货 → 同步到产品图片资料（设 product_id）
+            const syncToProduct = (v.type === 'in' || v.type === 'return') && productId;
+            await api.uploadFile(v.image, {
+              product_id: syncToProduct ? productId : undefined,
+              batch_id: batchId,
+              type: 'image',
+              remark: v.image_remark || `${TYPE_LABEL[v.type]?.t || v.type}凭证`,
+            });
+          }
+          message.success('已登记');
+          reload();
         }}
       />
     </Card>

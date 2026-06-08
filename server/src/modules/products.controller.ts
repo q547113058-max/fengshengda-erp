@@ -3,6 +3,7 @@
 import { Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
+import { Public } from '../common/public.decorator';
 import { UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto, UpdateProductDto, ProductPriceDto, UpdatePriceDto } from '../dto/product.dto';
@@ -15,6 +16,7 @@ export class ProductsController {
   constructor(private readonly svc: ProductsService) {}
 
   @Get()
+  @Public()
   @ApiOperation({ summary: '产品列表（含双税票价）' })
   list() { return this.svc.list(); }
 

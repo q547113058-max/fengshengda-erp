@@ -34,7 +34,7 @@ export default function Media() {
     beforeUpload: async (file: File) => {
       try {
         const type = file.type.startsWith('video/') ? 'video' : 'image';
-        await api.uploadFile(file, filter, type as any, user.id);
+        await api.uploadFile(file, { product_id: filter || undefined, type: type as any, uploader_id: user.id });
         message.success('上传成功');
         reload();
       } catch (e: any) {
@@ -71,6 +71,7 @@ export default function Media() {
             <div key={m.id} style={{ border: '1px solid var(--line)', background: 'var(--paper)', padding: 10, position: 'relative' }}>
               <Image src={m.thumb || m.file_path} style={{ width: '100%', height: 160, objectFit: 'cover' }} />
               <div style={{ marginTop: 8, fontSize: 13, fontWeight: 500 }}>{productName(m.product_id)}</div>
+              {m.remark && <div style={{ fontSize: 12, color: 'var(--ink-2)', marginTop: 2 }}>{m.remark}</div>}
               <div className="text-ink-3" style={{ fontSize: 11, marginTop: 4 }}>{new Date(m.created_at).toLocaleString()}</div>
               <div style={{ position: 'absolute', top: 8, right: 8 }}>
                 <Popconfirm title="删除该图片？" onConfirm={() => remove(m.id)}>

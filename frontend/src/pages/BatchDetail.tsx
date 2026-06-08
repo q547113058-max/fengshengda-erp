@@ -57,9 +57,9 @@ export default function BatchDetail() {
         <Descriptions.Item label="产地">{product?.origin || '—'}</Descriptions.Item>
         <Descriptions.Item label="仓库位置">{batch.warehouse}</Descriptions.Item>
         <Descriptions.Item label="接手人">{batch.holder}</Descriptions.Item>
-        <Descriptions.Item label="入库总数">{batch.qty_total} 箱</Descriptions.Item>
-        <Descriptions.Item label="已售出">{batch.qty_total - batch.qty_remaining} 箱</Descriptions.Item>
-        <Descriptions.Item label="当前剩余"><span className="text-copper" style={{ fontWeight: 600, fontSize: 16 }}>{batch.qty_remaining} 箱</span></Descriptions.Item>
+        <Descriptions.Item label="入库总数">{batch.qty_total} 吨</Descriptions.Item>
+        <Descriptions.Item label="已售出">{batch.qty_total - batch.qty_remaining} 吨</Descriptions.Item>
+        <Descriptions.Item label="当前剩余"><span className="text-copper" style={{ fontWeight: 600, fontSize: 16 }}>{batch.qty_remaining} 吨</span></Descriptions.Item>
         <Descriptions.Item label="库存率" span={3}>
           {((batch.qty_remaining / batch.qty_total) * 100).toFixed(0)}%
         </Descriptions.Item>
@@ -80,7 +80,7 @@ export default function BatchDetail() {
                   <div>
                     <div style={{ fontWeight: 500 }}>
                       <Tag color={t.c}>{t.t}</Tag>
-                      <span style={{ fontFamily: 'var(--font-mono)' }}>{m.type === 'in' ? `+${m.qty}` : `-${m.qty}`} 箱</span>
+                      <span style={{ fontFamily: 'var(--font-mono)' }}>{m.type === 'in' ? `+${m.qty}` : `-${m.qty}`} 吨</span>
                       <span className="text-ink-3" style={{ marginLeft: 12, fontSize: 12 }}>{new Date(m.created_at).toLocaleString()}</span>
                     </div>
                     <div className="text-ink-3" style={{ fontSize: 12, marginTop: 4 }}>

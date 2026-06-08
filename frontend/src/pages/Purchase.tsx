@@ -42,7 +42,7 @@ export default function Purchase() {
   const fields: FieldDef[] = [
     { name: 'supplier_id', label: '供应商', type: 'select', required: true, options: suppliers.map(s => ({ value: s.id, label: s.name })) },
     { name: 'product_id',  label: '产品',   type: 'select', required: true, options: products.map(p => ({ value: p.id, label: `${p.category} · ${p.factory_code}` })) },
-    { name: 'qty',         label: '数量（箱）', type: 'number', required: true, min: 1 },
+    { name: 'qty',         label: '数量（吨）', type: 'number', required: true, min: 1 },
     { name: 'cost_price',  label: '采购单价',   type: 'number', required: true, min: 0, step: 0.01 },
     { name: 'purchase_date', label: '采购日期', type: 'date' },
     { name: 'paid_amount', label: '已付金额',   type: 'number', min: 0, step: 0.01, initialValue: 0 },
@@ -96,7 +96,7 @@ export default function Purchase() {
           { title: '采购单号', dataIndex: 'po_no', width: 150, render: (v: string) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{v}</span> },
           { title: '供应商', dataIndex: 'supplier_id', width: 180, render: supplierName },
           { title: '产品', dataIndex: 'product_id', width: 200, render: productName },
-          { title: '数量', dataIndex: 'qty', width: 80, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v} 箱</span> },
+          { title: '数量', dataIndex: 'qty', width: 80, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v} 吨</span> },
           { title: '单价', dataIndex: 'cost_price', width: 90, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>¥ {v.toFixed(2)}</span> },
           { title: '总额', width: 110, align: 'right' as const, render: (_: any, r: any) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>¥ {(r.qty * r.cost_price).toFixed(0)}</span> },
           { title: '已付', dataIndex: 'paid_amount', width: 90, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>¥ {v.toFixed(0)}</span> },

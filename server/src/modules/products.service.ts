@@ -49,8 +49,17 @@ export class ProductsService {
   }
 
   /** 更新产品 */
-  async update(id: number, body: UpdateProductDto) {
-    await this.products.update(id, body);
+  async update(id: number, body: any) {
+    const { prices, ...productData } = body;
+    if (Object.keys(productData).length > 0) {
+      await this.products.update(id, productData);
+    }
+    if (prices !== undefined) {
+      await this.prices.delete({ product_id: id });
+      if (prices.length) {
+        await this.prices.save(prices.map((p: any) => this.prices.create({ ...p, product_id: id })));
+      }
+    }
     return this.products.findOne({ where: { id } });
   }
 

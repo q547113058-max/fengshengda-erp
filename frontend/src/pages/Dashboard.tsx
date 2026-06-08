@@ -75,7 +75,7 @@ export default function Dashboard() {
         </div>
         <div className="dashboard-kpi-cell">
           <div className="kpi-trend">{kpi.batchCount} 批次</div>
-          <div className="kpi-label">在库库存（箱）</div>
+          <div className="kpi-label">在库库存（吨）</div>
           <div className="num-display">📦 {kpi.totalStockQty.toLocaleString()}</div>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function Dashboard() {
                 </div>
               ) },
               { title: '货地', dataIndex: ['product', 'goods_location'], width: 130, render: (s: string) => <span className="text-ink-3">{s}</span> },
-              { title: '剩余（箱）', dataIndex: 'qty', width: 110, align: 'right' as const, render: (v: number) => (
+              { title: '剩余（吨）', dataIndex: 'qty', width: 110, align: 'right' as const, render: (v: number) => (
                 <span className={v < 200 ? 'text-burgundy' : 'text-copper'} style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>{v}</span>
               ) },
               { title: '状态', width: 90, render: (_: any, r: any) => (

@@ -13,7 +13,7 @@ export class ProductPrice {
   @JoinColumn({ name: 'product_id' })
   product: Product;
 
-  @Column({ name: 'tax_rate', type: 'real' })
+  @Column({ name: 'tax_rate', type: 'real', nullable: true })
   tax_rate: number;
 
   @Column({ type: 'real' })
@@ -21,4 +21,8 @@ export class ProductPrice {
 
   @Column({ name: 'effective_from', type: 'date', default: () => 'CURRENT_DATE' })
   effective_from: string;
+
+  // 价格备注（如：1%农副价、散客价、批发价）
+  @Column({ type: 'text', nullable: true })
+  remark: string;
 }

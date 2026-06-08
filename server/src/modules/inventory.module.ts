@@ -68,7 +68,7 @@ class InventoryController {
       if (!batch) throw new NotFoundException('批次不存在');
       // 校验数量（DTO 已校验 qty>0）
       if ((body.type === 'out' || body.type === 'loss') && batch.qty_remaining < body.qty) {
-        throw new BadRequestException(`批次 ${batch.batch_no} 剩余 ${batch.qty_remaining} 箱，不足`);
+        throw new BadRequestException(`批次 ${batch.batch_no} 剩余 ${batch.qty_remaining} 吨，不足`);
       }
       const newRem = (body.type === 'in' || body.type === 'return') ? batch.qty_remaining + body.qty : batch.qty_remaining - body.qty;
       // status 逻辑：按 type 分支判断，不混三元

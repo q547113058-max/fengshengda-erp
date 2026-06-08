@@ -75,12 +75,14 @@ export const api = {
   addMovement:    (body: any)             => request<any>(`/inventory/movement`,     { method: 'POST', body: JSON.stringify(body) }),
 
   // 文件上传（不走 /api 前缀，Vite proxy 不加 api）
-  uploadFile: async (file: File, product_id?: number, type?: 'image'|'video', uploader_id?: number) => {
+  uploadFile: async (file: File, opts?: { product_id?: number; batch_id?: number; type?: 'image'|'video'; uploader_id?: number; remark?: string }) => {
     const fd = new FormData();
     fd.append('file', file);
-    if (product_id) fd.append('product_id', String(product_id));
-    if (type) fd.append('type', type);
-    if (uploader_id) fd.append('uploader_id', String(uploader_id));
+    if (opts?.product_id) fd.append('product_id', String(opts.product_id));
+    if (opts?.batch_id) fd.append('batch_id', String(opts.batch_id));
+    if (opts?.type) fd.append('type', opts.type);
+    if (opts?.uploader_id) fd.append('uploader_id', String(opts.uploader_id));
+    if (opts?.remark) fd.append('remark', opts.remark);
     const token = getAuthToken();
     const headers: Record<string, string> = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;

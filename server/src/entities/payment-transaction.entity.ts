@@ -48,6 +48,10 @@ export class PaymentTransaction {
   @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
+  // 收付款凭证图片 URL
+  @Column({ name: 'receipt_url', length: 500, nullable: true })
+  receipt_url: string;
+
   // 反冲标记：'active' | 'reversed'
   @Column({ length: 20, default: 'active' })
   status: 'active' | 'reversed';

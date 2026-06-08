@@ -18,7 +18,7 @@ import Commission from './pages/Commission';
 import FinanceReceive from './pages/FinanceReceive';
 import FinancePay from './pages/FinancePay';
 import AccountLedger from './pages/AccountLedger';
-import PriceSettings from './pages/PriceSettings';
+
 import UserSettings from './pages/UserSettings';
 import { useAuth, Role } from './store';
 import { Component, ReactNode, useEffect } from 'react';
@@ -73,7 +73,7 @@ export default function App() {
           <Route path="/finance/receive" element={<Guard roles={['boss','finance']}><FinanceReceive /></Guard>} />
           <Route path="/finance/pay" element={<Guard roles={['boss','finance']}><FinancePay /></Guard>} />
           <Route path="/finance/ledger" element={<Guard roles={['boss','finance']}><AccountLedger /></Guard>} />
-          <Route path="/settings/prices" element={<Guard roles={['boss','finance']}><PriceSettings /></Guard>} />
+
           <Route path="/settings/users" element={<Guard roles={['boss']}><UserSettings /></Guard>} />
           <Route path="*" element={<NotFound />} />
         </Route>

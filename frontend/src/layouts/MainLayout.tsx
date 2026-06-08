@@ -5,7 +5,7 @@ import {
   DashboardOutlined, AppstoreOutlined, ShoppingCartOutlined, ShopOutlined,
   ContainerOutlined, FileTextOutlined, PictureOutlined, ShoppingOutlined,
   TeamOutlined, UserOutlined, DollarOutlined, AccountBookOutlined,
-  TagsOutlined, SettingOutlined, LogoutOutlined,
+  SettingOutlined, LogoutOutlined,
 } from '@ant-design/icons';
 import { useAuth, Role } from '@/store';
 import dayjs from 'dayjs';
@@ -35,7 +35,7 @@ const NAV: NavItem[] = [
   { key: '/finance/receive',label: '收款',      icon: <DollarOutlined />,       section: '财务',  roles: ['boss','finance'] },
   { key: '/finance/pay',   label: '付款',       icon: <DollarOutlined />,       section: '财务',  roles: ['boss','finance'] },
   { key: '/finance/ledger',label: '账户流水',   icon: <AccountBookOutlined />,  section: '财务',  roles: ['boss','finance'] },
-  { key: '/settings/prices',label:'价格设置',   icon: <TagsOutlined />,         section: '系统',  roles: ['boss','finance'] },
+
   { key: '/settings/users',label: '用户权限',   icon: <SettingOutlined />,      section: '系统',  roles: ['boss'] },
 ];
 
@@ -109,9 +109,10 @@ export default function MainLayout() {
             <span className="num">/ {dayjs().format('YYYY年M月D日')}</span>
           </h2>
           <Dropdown
+            trigger={['click']}
             menu={{
               items: [
-                { key: 'profile', label: '个人资料', icon: <UserOutlined />, disabled: true },
+                { key: 'profile', label: '个人资料', icon: <UserOutlined />, onClick: () => nav('/settings/users?editSelf=true') },
                 { type: 'divider' },
                 { key: 'logout',  label: '退出登录', icon: <LogoutOutlined />, onClick: onLogout },
               ],

@@ -42,6 +42,7 @@ export class CreateTransactionDto {
   @ApiPropertyOptional() @IsOptional() @IsString() counter_party?: string;
   @ApiPropertyOptional() @IsOptional() @IsInt() operator_id?: number;
   @ApiPropertyOptional() @IsOptional() @IsString() remark?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() receipt_url?: string;
 }
 
 export class CreateMediaDto {

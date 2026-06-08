@@ -39,7 +39,7 @@ export class SalesService {
       if (!batch) throw new NotFoundException('批次不存在');
       if (batch.qty_remaining < body.qty) {
         throw new BadRequestException(
-          `批次 ${batch.batch_no} 剩余 ${batch.qty_remaining} 箱，不足 ${body.qty}`,
+          `批次 ${batch.batch_no} 剩余 ${batch.qty_remaining} 吨，不足 ${body.qty}`,
         );
       }
 

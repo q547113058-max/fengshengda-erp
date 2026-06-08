@@ -24,7 +24,8 @@ export class Product {
   @Column({ length: 40, nullable: true })
   grade: string;
 
-  @Column({ name: 'qty_per_unit', type: 'integer', default: 1 })
+  // 库存吨数（鸡爪供应链以吨为单位）
+  @Column({ name: 'qty_per_unit', type: 'real', default: 1 })
   qty_per_unit: number;
 
   @Column({ name: 'goods_location', length: 80, nullable: true })

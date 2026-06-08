@@ -92,7 +92,7 @@ export class MediaController {
   }))
   async upload(
     @UploadedFile() file: Express.Multer.File,
-    @Body() body: { product_id?: number; type?: 'image'|'video'; uploader_id?: number },
+    @Body() body: { product_id?: number; batch_id?: number; type?: 'image'|'video'; uploader_id?: number; remark?: string },
   ) {
     if (!file) throw new BadRequestException('未收到文件');
     if (!file.path) throw new BadRequestException('文件未写入磁盘');
@@ -108,10 +108,12 @@ export class MediaController {
     const type = body.type || (detected.startsWith('video/') ? 'video' : 'image');
     return this.repo.save(this.repo.create({
       product_id: body.product_id,
+      batch_id: body.batch_id,
       type,
       file_path: `/uploads/${file.filename}`,
       thumb: `/uploads/${file.filename}`,
       uploader_id: body.uploader_id,
+      remark: body.remark,
     }));
   }
 

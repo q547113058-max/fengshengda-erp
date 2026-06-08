@@ -34,6 +34,10 @@ export class MediaAsset {
   @Column({ name: 'uploader_id', nullable: true })
   uploader_id: number;
 
+  // 图片备注（出入库凭证、产品说明等）
+  @Column({ type: 'text', nullable: true })
+  remark: string;
+
   @ManyToOne(() => User)
   @JoinColumn({ name: 'uploader_id' })
   uploader: User;

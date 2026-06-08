@@ -1,4 +1,5 @@
-import { Card, Descriptions, Table, Tabs, Tag, Image, Empty } from 'antd';
+import { Card, Descriptions, Table, Tabs, Tag, Image, Empty, Button, Input, InputNumber, Space, App } from 'antd';
+import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '@/api/client';
@@ -6,32 +7,53 @@ import { api } from '@/api/client';
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
+  const { message } = App.useApp();
   const [product, setProduct] = useState<any>(null);
   const [prices, setPrices] = useState<any[]>([]);
+  const [editPrices, setEditPrices] = useState<any[]>([]);
+  const [priceDirty, setPriceDirty] = useState(false);
   const [media, setMedia] = useState<any[]>([]);
   const [batches, setBatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const reload = () => {
     if (!id) return;
     setLoading(true);
     Promise.all([
       api.one('products', id),
-      api.one('products', id).then(() => api.list<any[]>('media').catch(() => [])).then(all => all.filter((m: any) => m.product_id === +id!)),
-      api.list<any[]>('inventory/batches').then(all => all.filter((b: any) => b.product_id === +id!)),
-    ]).then(([p, m, b]: any) => {
+      api.list<any[]>('media').catch(() => []),
+      api.list<any[]>('inventory/batches').catch(() => []),
+    ]).then(([p, allMedia, allBatches]: any) => {
       setProduct(p);
-      setPrices(p?.prices || []);
-      setMedia(m);
-      setBatches(b);
+      const pr = p?.prices || [];
+      setPrices(pr);
+      setEditPrices(pr.map((x: any) => ({ ...x })));
+      setPriceDirty(false);
+      setMedia(allMedia.filter((m: any) => m.product_id === +id!));
+      setBatches(allBatches.filter((b: any) => b.product_id === +id!));
     }).finally(() => setLoading(false));
-  }, [id]);
+  };
+  useEffect(reload, [id]);
 
   if (loading) return <Card loading />;
   if (!product) return <Empty description="产品不存在" />;
 
   const totalStock = batches.reduce((a, b) => a + b.qty_remaining, 0);
-  const totalSold = batches.reduce((a, b) => a + (b.qty_total - b.qty_remaining), 0);
+
+  const addPrice = () => { setEditPrices([...editPrices, { price: 0, remark: '' }]); setPriceDirty(true); };
+  const removePrice = (idx: number) => { setEditPrices(editPrices.filter((_, i) => i !== idx)); setPriceDirty(true); };
+  const updatePrice = (idx: number, field: string, val: any) => {
+    const next = [...editPrices];
+    next[idx] = { ...next[idx], [field]: val };
+    setEditPrices(next);
+    setPriceDirty(true);
+  };
+  const savePrices = async () => {
+    const cleaned = editPrices.filter(p => p.price > 0).map(p => ({ price: p.price, remark: p.remark || '' }));
+    await api.update('products', product.id, { prices: cleaned });
+    message.success('价格已保存');
+    reload();
+  };
 
   return (
     <Card
@@ -54,29 +76,51 @@ export default function ProductDetail() {
                 <Descriptions.Item label="规格">{product.spec}</Descriptions.Item>
                 <Descriptions.Item label="等级"><Tag color="processing">{product.grade}</Tag></Descriptions.Item>
                 <Descriptions.Item label="货地">{product.goods_location}</Descriptions.Item>
-                <Descriptions.Item label="每箱数量">{product.qty_per_unit} 袋/盒</Descriptions.Item>
+                <Descriptions.Item label="库存(吨)">{product.qty_per_unit} 吨</Descriptions.Item>
                 <Descriptions.Item label="备注" span={2}>{product.remark || '—'}</Descriptions.Item>
               </Descriptions>
             ),
           },
           {
-            key: 'price', label: '双税票价',
+            key: 'price', label: '价格',
             children: (
-              <Table
-                size="small"
-                rowKey="id"
-                dataSource={prices}
-                pagination={false}
-                columns={[
-                  { title: '税率', dataIndex: 'tax_rate', render: (v: number) => <Tag color={v === 1 ? 'gold' : 'blue'}>{v === 1 ? '1% 农副' : '9% 一般'}</Tag> },
-                  { title: '含税价', dataIndex: 'price', align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 500 }}>¥ {v.toFixed(2)} / 箱</span> },
-                  { title: '生效日期', dataIndex: 'effective_from' },
-                ]}
-              />
+              <>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+                  <Button size="small" icon={<PlusOutlined />} onClick={addPrice}>添加价格</Button>
+                  {priceDirty && <Button size="small" type="primary" onClick={savePrices}>保存价格</Button>}
+                </div>
+                {editPrices.length === 0 ? (
+                  <Empty description="暂无价格，点击上方添加" />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {editPrices.map((p, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <span style={{ color: 'var(--ink-3)', fontSize: 12, width: 20, textAlign: 'center' }}>{i + 1}</span>
+                        <InputNumber
+                          value={p.price}
+                          min={0}
+                          step={0.01}
+                          placeholder="单价(元/吨)"
+                          style={{ width: 160 }}
+                          onChange={v => updatePrice(i, 'price', v || 0)}
+                          addonBefore="¥"
+                        />
+                        <Input
+                          value={p.remark}
+                          placeholder="备注（如：1%农副价、散客价）"
+                          style={{ flex: 1 }}
+                          onChange={e => updatePrice(i, 'remark', e.target.value)}
+                        />
+                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removePrice(i)} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             ),
           },
           {
-            key: 'stock', label: `库存（${batches.length} 批次 / 剩余 ${totalStock} 箱）`,
+            key: 'stock', label: `库存（${batches.length} 批次 / 剩余 ${totalStock} 吨）`,
             children: (
               <Table
                 size="small"
@@ -102,7 +146,8 @@ export default function ProductDetail() {
                 {media.map(m => (
                   <div key={m.id} style={{ border: '1px solid var(--line)', background: 'var(--paper-2)', padding: 8 }}>
                     <Image src={m.file_path} alt="产品图" style={{ width: '100%', height: 140, objectFit: 'cover' }} />
-                    <div className="text-ink-3" style={{ fontSize: 11, marginTop: 6 }}>{new Date(m.created_at).toLocaleString()}</div>
+                    {m.remark && <div style={{ fontSize: 12, marginTop: 4 }}>{m.remark}</div>}
+                    <div className="text-ink-3" style={{ fontSize: 11, marginTop: 4 }}>{new Date(m.created_at).toLocaleString()}</div>
                   </div>
                 ))}
               </div>

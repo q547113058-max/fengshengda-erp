@@ -103,7 +103,7 @@ export default function CustomerDetail() {
                   { title: '日期', dataIndex: 'sale_date' },
                   { title: '销售单号', dataIndex: 'so_no', render: (v: string) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v}</span> },
                   { title: '产品', dataIndex: 'product_id', render: pname },
-                  { title: '数量', dataIndex: 'qty', align: 'right' as const, render: (v: number) => `${v} 箱` },
+                  { title: '数量', dataIndex: 'qty', align: 'right' as const, render: (v: number) => `${v} 吨` },
                   { title: '单价', dataIndex: 'sale_price', align: 'right' as const, render: (v: number) => `¥ ${v.toFixed(2)}` },
                   { title: '金额', align: 'right' as const, render: (_: any, r: any) => <span style={{ fontFamily: 'var(--font-mono)' }}>¥ {(r.qty * r.sale_price).toFixed(0)}</span> },
                   { title: '已收', dataIndex: 'received_amount', align: 'right' as const, render: (v: number) => <span className="text-moss" style={{ fontFamily: 'var(--font-mono)' }}>¥ {v.toFixed(0)}</span> },

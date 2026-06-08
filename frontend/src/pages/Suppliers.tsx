@@ -71,7 +71,7 @@ export default function Suppliers() {
           } },
           { title: '操作', width: 140, align: 'right' as const, fixed: 'right' as const, render: (_: any, r: any) => (
             <Space onClick={e => e.stopPropagation()}>
-              <Button size="small" onClick={() => setEditing(r)}>编辑</Button>
+              <Button size="small" onClick={() => { setEditing(r); setModalOpen(true); }}>编辑</Button>
               <Popconfirm title="删除该供应商？" onConfirm={e => remove(r.id, e)}>
                 <Button size="small" danger>删除</Button>
               </Popconfirm>
