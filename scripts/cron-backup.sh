@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 # MariaDB 每日 3:00 自动备份
 # 保留 14 天（公司 ERP 数据惯例）；每天全量 dump + gzip
-# 用法：sudo cp scripts/cron-backup.sh /etc/cron.daily/erp-backup && sudo chmod +x /etc/cron.daily/erp-backup
+# 用法：
+#   1. 配凭据（避免明文）：sudo tee /etc/default/erp-backup < env-file.txt
+#   2. 部署：sudo cp scripts/cron-backup.sh /etc/cron.daily/erp-backup && sudo chmod +x
+#   3. 测试：sudo /etc/cron.daily/erp-backup
 set -euo pipefail
+
+# === 加载凭据（生产环境从 /etc/default/erp-backup 读，演示环境用默认值）===
+ENV_FILE="${ERP_BACKUP_ENV:-/etc/default/erp-backup}"
+if [ -f "$ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  set -a; . "$ENV_FILE"; set +a
+fi
 
 # === 配置（按实际改）===
 DB_HOST=${DB_HOST:-localhost}

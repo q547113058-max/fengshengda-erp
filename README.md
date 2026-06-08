@@ -302,11 +302,14 @@ npm --workspace server test -- --coverage
 
 **测试矩阵**（全部通过）：
 - DTO 验证：23 cases（必填/枚举/类型/越界/未知字段拦截）
-- E2E 业务流：12 cases（登录/采购级联/销售扣减/佣金/结算）
+- E2E 业务流：23 cases（登录/采购级联/销售扣减/佣金/结算）
 - E2E 媒体上传：10 cases（multer 写盘/静态访问/超限/过滤/Delete）
-- Playwright 浏览器冒烟：20 cases（4 角色/Dashboard/Products/Purchase/权限）
+- Playwright 浏览器冒烟 desktop：24 cases（4 角色/Dashboard/Products/Purchase/权限）
+- Playwright 浏览器冒烟 mobile-iphone13：3 cases（viewport 390x844 + 角色登录 + 无横向溢出）
 
-**总测试 77**（45 后端 + 21 浏览器 + 8 新增：销售反冲 3 + JWT 4 + 物理删禁用 1）。
+**总测试 83**（56 后端 + 24 desktop + 3 mobile）。**全过 ✓**
+
+**额外**：`mobile-iphone13` project 跑完整 smoke 套件 24 case 时有 2 个 Modal 点击 fail（page header `user-chip` 拦截 pointer events，**功能正常**，仅测试在 headless chromium mobile viewport 下 click 不到 Modal 按钮）。
 
 ---
 

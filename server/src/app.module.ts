@@ -43,7 +43,7 @@ import { LoggingModule } from './common/logging.module';
     TypeOrmModule.forFeature(ALL_ENTITIES),
     JwtModule.register({
       secret: buildJwtSecret(),
-      signOptions: { expiresIn: '8h' },
+      signOptions: { expiresIn: '24h' },
     }),
   ],
   exports: [TypeOrmModule, JwtModule],

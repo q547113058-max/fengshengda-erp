@@ -19,6 +19,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'mobile-iphone13', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true } },
   ],
   // 测试启动后端 + 前端（已用 pm2 跑着）
   webServer: process.env.SKIP_WEBSERVER

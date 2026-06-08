@@ -22,4 +22,8 @@ export class Supplier {
 
   @Column({ type: 'text', nullable: true })
   remark: string;
+
+  // 税号（增值税开票用）— v0.2 加
+  @Column({ name: 'tax_id', length: 50, nullable: true })
+  tax_id: string;
 }

@@ -14,8 +14,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     setLoading(true);
-    api.dashboardKpi().then(setKpi).catch(e => console.error(e)).finally(() => setLoading(false));
-  }, []);
+    api.dashboardKpi()
+      .then(setKpi)
+      .catch(async (e: any) => {
+        console.error(e);
+        // 401 = token 失效 → 强制重新登录
+        if (e?.status === 401) {
+          // 清 store + token + 跳登录
+          try { localStorage.removeItem('fsd-token'); } catch { /* ignore */ }
+          nav('/login', { replace: true });
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [nav]);
 
   if (loading || !kpi) {
     return <Card loading={loading} />;
