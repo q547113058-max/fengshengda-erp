@@ -53,6 +53,12 @@ export const useAuth = create<AuthState>()(
     }),
     {
       name: 'fsd-auth',
+      version: 2,
+      migrate: (persisted: any, version: number) => {
+        // version < 2 的旧数据没有 full_name，直接清空让用户重新登录
+        if (version < 2) return { user: null };
+        return persisted;
+      },
       storage: createJSONStorage(() => localStorage),
       // 只持久化 user，不持久化 _hydrated/loading/error 等瞬时状态
       partialize: (s) => ({ user: s.user } as any),

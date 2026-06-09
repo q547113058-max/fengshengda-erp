@@ -120,9 +120,9 @@ export default function MainLayout() {
             placement="bottomRight"
           >
             <div className="user-chip" style={{ cursor: 'pointer' }}>
-              <Avatar size={28} style={{ background: 'var(--ink)', fontSize: 12 }}>{user.full_name[0]}</Avatar>
+              <Avatar size={28} style={{ background: 'var(--ink)', fontSize: 12 }}>{(user.full_name ?? user.username ?? '?')[0]}</Avatar>
               <div>
-                <div className="name">{user.full_name}</div>
+                <div className="name">{user.full_name || user.username || '-'}</div>
                 <div className="role">{ROLE_LABEL[user.role]}</div>
               </div>
             </div>

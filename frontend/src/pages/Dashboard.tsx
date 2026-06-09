@@ -39,7 +39,7 @@ export default function Dashboard() {
     <>
       {/* 顶部欢迎条 */}
       <div className="dashboard-topbar">
-        <h1>欢迎，{user.full_name}</h1>
+        <h1>欢迎，{user.full_name || user.username || ''}</h1>
         <div className="kpi-pills">
           <div className="kpi-pill">
             <span className="pill-label">采购待结</span>
@@ -130,20 +130,6 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="divider-ink" style={{ margin: '20px 0 16px' }} />
-          <div className="section-head">
-            <div className="title">按客户性质</div>
-            <div className="eyebrow">{(Object.values(kpi.byNature) as number[]).reduce((a: number, b: number) => a + b, 0)} 客户</div>
-          </div>
-          <div className="channel-list">
-            {Object.entries(kpi.byNature).sort((a,b) => (b[1] as number) - (a[1] as number)).map(([name, n]: any) => (
-              <div className="row" key={name}>
-                <div className="name">{name}</div>
-                <div className="bar"><div className="fill" style={{ width: `${(n / totalCust) * 100}%` }} /></div>
-                <div className="count">{n}</div>
-              </div>
-            ))}
-          </div>
         </Card>
       </div>
 
