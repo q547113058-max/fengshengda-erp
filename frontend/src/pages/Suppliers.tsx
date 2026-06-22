@@ -8,6 +8,7 @@ export default function Suppliers() {
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
   const canEdit = user.role !== 'finance';
+  const canSeeContact = user.role === 'boss' || user.role === 'finance'; // 仓储看不到电话
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,14 +58,14 @@ export default function Suppliers() {
         expandable={{
           expandedRowRender: (r: any) => (
             <div style={{ padding: 8, color: 'var(--ink-2)' }}>
-              联系人：{r.contact_name || '—'} · 电话：<span style={{ fontFamily: 'var(--font-mono)' }}>{r.phone || '—'}</span> · 地址：{r.address || '—'} · 结款：<Tag color="processing">{r.settle_type}</Tag> · 备注：{r.remark || '—'}
+              联系人：{r.contact_name || '—'}{canSeeContact ? <> · 电话：<span style={{ fontFamily: 'var(--font-mono)' }}>{r.phone || '—'}</span></> : ''} · 地址：{r.address || '—'} · 结款：<Tag color="processing">{r.settle_type}</Tag> · 备注：{r.remark || '—'}
             </div>
           ),
         }}
         columns={[
           { title: '供应商', dataIndex: 'name', render: (v: string) => <span style={{ fontWeight: 500 }}>{v}</span> },
           { title: '联系人', dataIndex: 'contact_name', width: 110, render: (s: string) => s || '—' },
-          { title: '电话', dataIndex: 'phone', width: 130, render: (s: string) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{s || '—'}</span> },
+          ...(canSeeContact ? [{ title: '电话', dataIndex: 'phone', width: 130, render: (s: string) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{s || '—'}</span> }] : []),
           { title: '结款方式', dataIndex: 'settle_type', width: 110, render: (v: string) => <Tag color="processing">{v}</Tag> },
           { title: '采购单', width: 80, align: 'right' as const, render: (_: any, r: any) => summary(r.id).count },
           { title: '累计采购', width: 130, align: 'right' as const, render: (_: any, r: any) => <span style={{ fontFamily: 'var(--font-mono)' }}>¥ {summary(r.id).total.toLocaleString()}</span> },
