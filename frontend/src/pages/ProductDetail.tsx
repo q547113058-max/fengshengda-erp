@@ -10,7 +10,7 @@ export default function ProductDetail() {
   const nav = useNavigate();
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role !== 'finance';
+  const canEdit = user.role === 'boss'; // 仅老板可编辑
   const [product, setProduct] = useState<any>(null);
   const [prices, setPrices] = useState<any[]>([]);
   const [editPrices, setEditPrices] = useState<any[]>([]);

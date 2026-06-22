@@ -9,7 +9,7 @@ export default function Products() {
   const nav = useNavigate();
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role !== 'finance';
+  const canEdit = user.role === 'boss'; // 仅老板可编辑
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [kw, setKw] = useState('');

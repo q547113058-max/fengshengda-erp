@@ -7,7 +7,7 @@ import EditModal, { FieldDef } from '@/components/EditModal';
 export default function Suppliers() {
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role !== 'finance';
+  const canEdit = user.role === 'boss'; // 仅老板可编辑
   const canSeeContact = user.role === 'boss' || user.role === 'finance'; // 仓储看不到电话
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);

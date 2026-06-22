@@ -1,5 +1,6 @@
 import { Card, Table, Tag, Space, Button, App, Select, Modal, Form, InputNumber, Input } from 'antd';
 import { useEffect, useState, useMemo } from 'react';
+import { useAuth } from '@/store';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
@@ -11,6 +12,8 @@ const STATUS: Record<string, { label: string; color: string }> = {
 
 export default function Purchase() {
   const { message } = App.useApp();
+  const user = useAuth(s => s.user)!;
+  const canEdit = user.role === 'boss'; // 仅老板可编辑/付款/删除
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -82,7 +85,7 @@ export default function Purchase() {
             <Select.Option value="done">已结清</Select.Option>
           </Select>
           <span className="text-ink-3" style={{ fontSize: 12 }}>本月 {filtered.length} 笔</span>
-          <Button type="primary" onClick={() => setModalOpen(true)}>+ 新建采购</Button>
+          {canEdit && <Button type="primary" onClick={() => setModalOpen(true)}>+ 新建采购</Button>}
         </Space>
       }
     >
@@ -107,7 +110,7 @@ export default function Purchase() {
           { title: '采购日期', dataIndex: 'purchase_date', width: 110 },
           { title: '状态', dataIndex: 'settle_status', width: 90, render: (v: string) => { const s = STATUS[v] || { label: v, color: 'default' }; return <Tag color={s.color}>{s.label}</Tag>; } },
           { title: '备注', dataIndex: 'remark', width: 120, ellipsis: true, render: (s: string) => s || '—' },
-          { title: '操作', width: 180, align: 'right' as const, fixed: 'right' as const, render: (_: any, r: any) => (
+          { title: '操作', width: 180, align: 'right' as const, fixed: 'right' as const, render: (_: any, r: any) => !canEdit ? null : (
             <Space>
               {r.settle_status !== 'done' && <Button size="small" type="primary" onClick={() => openPay(r)}>付款</Button>}
               <Button size="small" danger onClick={() => remove(r.id)}>删除</Button>
