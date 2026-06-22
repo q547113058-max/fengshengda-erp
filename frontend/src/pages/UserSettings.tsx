@@ -1,6 +1,6 @@
 import { Card, Table, Tag, Button, Tabs, App } from 'antd';
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 import { useAuth } from '@/store';
@@ -18,11 +18,12 @@ const MODULES = [
   { key: 'finance',   label: '财务' },
 ];
 
-const MATRIX: Record<string, string[]> = {
-  boss:      ['products','purchase','suppliers','inventory','sales','customers','finance'],
-  finance:   ['products','purchase','suppliers','sales','customers','finance'],
-  warehouse: ['products','purchase','suppliers','inventory'],
-  sales:     ['products','sales','customers'],
+// 'e' = 可编辑, 'v' = 只查看, 不存在 = 无权限
+const MATRIX: Record<string, Record<string, string>> = {
+  boss:      { products:'e', purchase:'e', suppliers:'e', inventory:'e', sales:'e', customers:'e', finance:'e' },
+  finance:   { products:'v', purchase:'v', suppliers:'v', inventory:'v', sales:'v', customers:'v', finance:'e' },
+  warehouse: { products:'v', purchase:'v', suppliers:'v', inventory:'e' },
+  sales:     { products:'v', sales:'e', customers:'e' },
 };
 
 export default function UserSettings() {
@@ -34,6 +35,7 @@ export default function UserSettings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = useAuth(s => s.user);
   const isBoss = currentUser?.role === 'boss';
+  const nav = useNavigate();
 
   const reload = () => {
     setLoading(true);
@@ -42,7 +44,15 @@ export default function UserSettings() {
 
   useEffect(reload, []);
 
-  // ?editSelf=true 时自动打开当前用户编辑弹窗
+  // 非 boss：自动打开自己资料弹窗，隐藏页面内容
+  useEffect(() => {
+    if (!isBoss && users.length > 0 && currentUser) {
+      const me = users.find(u => u.id === currentUser.id);
+      if (me) { setEditing(me); setModalOpen(true); }
+    }
+  }, [isBoss, users, currentUser]);
+
+  // ?editSelf=true 时自动打开当前用户编辑弹窗（仅 boss 有侧边菜单入口）
   useEffect(() => {
     if (searchParams.get('editSelf') === 'true' && users.length > 0 && currentUser) {
       const me = users.find(u => u.id === currentUser.id);
@@ -50,7 +60,6 @@ export default function UserSettings() {
         setEditing(me);
         setModalOpen(true);
       }
-      // 清掉参数避免刷新重复弹
       setSearchParams({}, { replace: true });
     }
   }, [users, searchParams, currentUser, setSearchParams]);
@@ -98,8 +107,32 @@ export default function UserSettings() {
     { name: 'default_commission_rate', label: '默认佣金(%)', type: 'number', min: 0, step: 0.5 },
   ];
 
+  if (!isBoss) {
+    // 非 boss：只显示个人资料弹窗
+    return (
+      <EditModal
+        open={modalOpen}
+        title="个人资料"
+        fields={selfFields}
+        initial={editing || {}}
+        onCancel={() => { setModalOpen(false); setEditing(null); nav('/'); }}
+        onSubmit={async (v) => {
+          if (!v.new_password) delete v.new_password;
+          if (!v.old_password) delete v.old_password;
+          await api.update('users', editing.id, v);
+          if (currentUser) {
+            const { useAuth } = await import('@/store');
+            useAuth.setState({ user: { ...currentUser, ...v, password: undefined, new_password: undefined, old_password: undefined } });
+          }
+          setModalOpen(false);
+          setEditing(null);
+        }}
+      />
+    );
+  }
+
   return (
-    <Card title="用户与权限" extra={isBoss ? <Button type="primary" onClick={() => setCreateOpen(true)}>+ 新增用户</Button> : undefined}>
+    <Card title="用户与权限" extra={<Button type="primary" onClick={() => setCreateOpen(true)}>+ 新增用户</Button>}>
       <Tabs
         items={[
           {
@@ -134,13 +167,11 @@ export default function UserSettings() {
                   title={isSelf ? '个人资料' : `编辑用户 · ${editing?.full_name || ''}`}
                   fields={fields}
                   initial={editing || {}}
-                  onCancel={() => { setModalOpen(false); setEditing(null); }}
+                  onCancel={() => { setModalOpen(false); setEditing(null); nav('/'); }}
                   onSubmit={async (v) => {
-                    // 空密码字段不提交
                     if (!v.new_password) delete v.new_password;
                     if (!v.old_password) delete v.old_password;
                     await api.update('users', editing.id, v);
-                    // 如果改了自己，同步更新 store
                     if (isSelf && currentUser) {
                       const { useAuth } = await import('@/store');
                       useAuth.setState({ user: { ...currentUser, ...v, password: undefined, new_password: undefined, old_password: undefined } });
@@ -175,7 +206,12 @@ export default function UserSettings() {
                   { title: '角色', dataIndex: 'role', width: 120, render: (v: string) => <Tag color={ROLE_COLOR[v]}>{ROLE_LABEL[v]}</Tag> },
                   ...MODULES.map(m => ({
                     title: m.label, key: m.key, align: 'center' as const, width: 90,
-                    render: (_: any, r: any) => r.mods.includes(m.key) ? <span style={{ color: 'var(--moss)', fontSize: 18 }}>✓</span> : <span className="text-ink-3">—</span>,
+                    render: (_: any, r: any) => {
+                      const p = r.mods[m.key];
+                      if (p === 'e') return <span style={{ color: 'var(--moss)', fontWeight: 500 }}>编辑</span>;
+                      if (p === 'v') return <span style={{ color: 'var(--copper)' }}>查看</span>;
+                      return <span className="text-ink-3">—</span>;
+                    },
                   })),
                 ]}
               />

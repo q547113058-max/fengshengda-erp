@@ -6,13 +6,14 @@ import { useAuth } from '@/store';
 import { api } from '@/api/client';
 
 const ROLES: Array<{ username: string; label: string; desc: string }> = [
-  { username: 'boss',    label: '老板',  desc: '查看全部数据 / 报表' },
+  { username: 'boss',    label: '老板',  desc: '全部数据 · 编辑管理' },
   { username: 'finance', label: '财务',  desc: '收款付款 / 账户流水' },
-  { username: 'warehouse', label: '仓储', desc: '产品 / 库存 / 出入库' },
+  { username: 'warehouse', label: '仓储', desc: '采购库存查看 / 出入库操作' },
   { username: 'sales01', label: '销售',  desc: '客户 / 销售 / 佣金' },
 ];
 
 interface ProductSummary {
+  id: number;
   category: string;
   factory_code: string;
   spec: string;
@@ -36,19 +37,26 @@ export default function Login() {
     (async () => {
       setLoadingProducts(true);
       try {
-        const res = await fetch('http://localhost:3003/api/auth/login', {
+        const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: 'boss', password: 'demo' }),
         });
         if (!res.ok) throw new Error('auth failed');
         const { access_token } = await res.json();
-        const r = await fetch('http://localhost:3003/api/products', {
+        const r = await fetch('/api/products', {
           headers: { Authorization: 'Bearer ' + access_token },
         });
-        if (r.ok) setProducts(await r.json());
-      } catch {
-        // ignore — 静默跳过
+        console.log('[Login] products response status:', r.status);
+        if (r.ok) {
+          const data = await r.json();
+          console.log('[Login] products count:', data.length, 'first:', JSON.stringify(data[0]));
+          setProducts(data);
+        } else {
+          console.log('[Login] products fetch failed, status:', r.status);
+        }
+      } catch (e) {
+        console.error('[Login] 产品数据加载失败:', e);
       } finally {
         setLoadingProducts(false);
       }
@@ -69,6 +77,7 @@ export default function Login() {
   };
 
   const formatPrice = (prices: ProductSummary['prices']) => {
+    console.log('[Login] render - products length:', products.length);
     if (!prices?.length) return '—';
     return prices.map(p => `¥${p.price.toFixed(2)}${p.remark ? ` (${p.remark})` : ''}`).join(' / ');
   };
@@ -92,28 +101,43 @@ export default function Login() {
             ) : products.length === 0 ? (
               <div style={{ color: 'var(--ink-3)', fontSize: 13 }}>暂无产品数据</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 320, overflowY: 'auto' }}>
-                {products.map(p => (
-                  <div key={p.factory_code} style={{
-                    border: '1px solid var(--line)',
-                    borderRadius: 6,
-                    padding: '10px 14px',
-                    background: 'var(--paper-2)',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontWeight: 600, fontSize: 14 }}>{p.category}</span>
-                      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{p.factory_code}</span>
+              <div style={{ overflow: 'hidden', height: 320, position: 'relative' }}>
+                <style>{`
+                  @keyframes productScroll {
+                    0%   { transform: translateY(0); }
+                    100% { transform: translateY(-50%); }
+                  }
+                  .product-scroll-inner {
+                    animation: productScroll ${products.length * 4}s linear infinite;
+                  }
+                  .product-scroll-inner:hover {
+                    animation-play-state: paused;
+                  }
+                `}</style>
+                <div className="product-scroll-inner">
+                  {[...products, ...products].map((p, idx) => (
+                    <div key={`${p.id}-${idx}`} style={{
+                      border: '1px solid var(--line)',
+                      borderRadius: 6,
+                      padding: '10px 14px',
+                      background: 'var(--paper-2)',
+                      marginBottom: 10,
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                        <span style={{ fontWeight: 600, fontSize: 14 }}>{p.category}</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-3)' }}>{p.factory_code}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12, color: 'var(--ink-2)' }}>
+                        <span>规格: {p.spec}</span>
+                        <span>产地: {p.origin}</span>
+                        <span>库存: {p.qty_per_unit} 吨</span>
+                      </div>
+                      <div style={{ fontSize: 12, color: 'var(--copper)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+                        {formatPrice(p.prices)}
+                      </div>
                     </div>
-                    <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12, color: 'var(--ink-2)' }}>
-                      <span>规格: {p.spec}</span>
-                      <span>产地: {p.origin}</span>
-                      <span>库存: {p.qty_per_unit} 吨</span>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--copper)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
-                      {formatPrice(p.prices)}
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
