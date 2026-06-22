@@ -3,6 +3,7 @@ import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
+import { canEdit as canEditPerm } from '@/utils/permissions';
 import { api } from '@/api/client';
 
 export default function ProductDetail() {
@@ -10,7 +11,7 @@ export default function ProductDetail() {
   const nav = useNavigate();
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role === 'boss'; // 仅老板可编辑
+  const canEdit = canEditPerm(user.role, 'products');
   const [product, setProduct] = useState<any>(null);
   const [prices, setPrices] = useState<any[]>([]);
   const [editPrices, setEditPrices] = useState<any[]>([]);

@@ -1,12 +1,14 @@
-import { Card, Table, Tag, Button, Tabs, App } from 'antd';
-import { useEffect, useState } from 'react';
+import { Card, Table, Tag, Button, Tabs, App, Space } from 'antd';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 import { useAuth } from '@/store';
+import { loadMatrix, saveMatrix, resetMatrix, getDefaults, PermMatrix, PermLevel } from '@/utils/permissions';
 
 const ROLE_LABEL: Record<string, string> = { boss: '老板', finance: '财务', warehouse: '仓储', sales: '销售' };
 const ROLE_COLOR: Record<string, string> = { boss: 'gold', finance: 'blue', warehouse: 'green', sales: 'default' };
+const ROLES = ['boss', 'finance', 'warehouse', 'sales'];
 
 const MODULES = [
   { key: 'products',  label: '产品' },
@@ -18,12 +20,9 @@ const MODULES = [
   { key: 'finance',   label: '财务' },
 ];
 
-// 'e' = 可编辑, 'v' = 只查看, 不存在 = 无权限
-const MATRIX: Record<string, Record<string, string>> = {
-  boss:      { products:'e', purchase:'e', suppliers:'e', inventory:'e', sales:'e', customers:'e', finance:'e' },
-  finance:   { products:'v', purchase:'v', suppliers:'v', inventory:'v', sales:'v', customers:'v', finance:'e' },
-  warehouse: { products:'v', purchase:'v', suppliers:'v', inventory:'e' },
-  sales:     { products:'v', sales:'e', customers:'e' },
+const PERM_LABEL: Record<string, { text: string; color: string }> = {
+  e: { text: '编辑', color: 'var(--moss)' },
+  v: { text: '查看', color: 'var(--copper)' },
 };
 
 export default function UserSettings() {
@@ -92,6 +91,38 @@ export default function UserSettings() {
   const fields = isSelf ? selfFields : (isBoss ? bossFields : selfFields);
 
   const [createOpen, setCreateOpen] = useState(false);
+
+  // 权限矩阵 — 可编辑
+  const [matrix, setMatrix] = useState<PermMatrix>(loadMatrix);
+  const [matrixDirty, setMatrixDirty] = useState(false);
+
+  const togglePerm = useCallback((role: string, mod: string) => {
+    setMatrix(prev => {
+      const next = { ...prev };
+      const rolePerms = { ...(next[role] || {}) };
+      const cur = rolePerms[mod];
+      // 循环: undefined → 'v' → 'e' → undefined
+      if (!cur) rolePerms[mod] = 'v';
+      else if (cur === 'v') rolePerms[mod] = 'e';
+      else delete rolePerms[mod];
+      next[role] = rolePerms;
+      return next;
+    });
+    setMatrixDirty(true);
+  }, []);
+
+  const handleSaveMatrix = () => {
+    saveMatrix(matrix);
+    setMatrixDirty(false);
+    message.success('权限已保存，用户重新登录后生效');
+  };
+
+  const handleResetMatrix = () => {
+    resetMatrix();
+    setMatrix(getDefaults());
+    setMatrixDirty(false);
+    message.success('已恢复默认权限');
+  };
 
   // 新增用户字段
   const createFields: FieldDef[] = [
@@ -197,24 +228,47 @@ export default function UserSettings() {
           {
             key: 'matrix', label: '权限矩阵',
             children: (
-              <Table
-                size="small"
-                rowKey="role"
-                dataSource={Object.keys(MATRIX).map(role => ({ role, mods: MATRIX[role] }))}
-                pagination={false}
-                columns={[
-                  { title: '角色', dataIndex: 'role', width: 120, render: (v: string) => <Tag color={ROLE_COLOR[v]}>{ROLE_LABEL[v]}</Tag> },
-                  ...MODULES.map(m => ({
-                    title: m.label, key: m.key, align: 'center' as const, width: 90,
-                    render: (_: any, r: any) => {
-                      const p = r.mods[m.key];
-                      if (p === 'e') return <span style={{ color: 'var(--moss)', fontWeight: 500 }}>编辑</span>;
-                      if (p === 'v') return <span style={{ color: 'var(--copper)' }}>查看</span>;
-                      return <span className="text-ink-3">—</span>;
-                    },
-                  })),
-                ]}
-              />
+              <>
+                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="text-ink-3" style={{ fontSize: 12 }}>点击单元格切换：编辑 → 查看 → 关闭</span>
+                  <Space>
+                    <Button size="small" onClick={handleResetMatrix}>恢复默认</Button>
+                    <Button size="small" type="primary" disabled={!matrixDirty} onClick={handleSaveMatrix}>保存权限</Button>
+                  </Space>
+                </div>
+                <Table
+                  size="small"
+                  rowKey="role"
+                  dataSource={ROLES.map(role => ({ role, mods: matrix[role] || {} }))}
+                  pagination={false}
+                  columns={[
+                    { title: '角色', dataIndex: 'role', width: 120, render: (v: string) => <Tag color={ROLE_COLOR[v]}>{ROLE_LABEL[v]}</Tag> },
+                    ...MODULES.map(m => ({
+                      title: m.label, key: m.key, align: 'center' as const, width: 90,
+                      render: (_: any, r: any) => {
+                        const p: PermLevel = r.mods[m.key];
+                        const info = PERM_LABEL[p as string];
+                        return (
+                          <span
+                            onClick={() => { if (r.role !== 'boss') togglePerm(r.role, m.key); }}
+                            style={{
+                              cursor: r.role === 'boss' ? 'default' : 'pointer',
+                              color: info?.color || 'var(--ink-3)',
+                              fontWeight: info ? 500 : undefined,
+                              padding: '2px 8px',
+                              borderRadius: 4,
+                              display: 'inline-block',
+                              userSelect: 'none',
+                            }}
+                          >
+                            {info ? info.text : '—'}
+                          </span>
+                        );
+                      },
+                    })),
+                  ]}
+                />
+              </>
             ),
           },
         ]}

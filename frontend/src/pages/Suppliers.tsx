@@ -1,13 +1,14 @@
 import { Card, Table, Tag, Space, Button, Popconfirm, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/store';
+import { canEdit as canEditPerm } from '@/utils/permissions';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
 export default function Suppliers() {
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role === 'boss'; // 仅老板可编辑
+  const canEdit = canEditPerm(user.role, 'suppliers');
   const canSeeContact = user.role === 'boss' || user.role === 'finance'; // 仓储看不到电话
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);

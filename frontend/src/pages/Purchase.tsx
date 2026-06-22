@@ -1,6 +1,7 @@
 import { Card, Table, Tag, Space, Button, App, Select, Modal, Form, InputNumber, Input } from 'antd';
 import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/store';
+import { canEdit as canEditPerm } from '@/utils/permissions';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
@@ -13,7 +14,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
 export default function Purchase() {
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role === 'boss'; // 仅老板可编辑/付款/删除
+  const canEdit = canEditPerm(user.role, 'purchase'); // 从权限矩阵读取
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);

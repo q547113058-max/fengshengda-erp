@@ -8,6 +8,7 @@ import {
   SettingOutlined, LogoutOutlined,
 } from '@ant-design/icons';
 import { useAuth, Role } from '@/store';
+import { canView } from '@/utils/permissions';
 import dayjs from 'dayjs';
 
 const { Header, Sider, Content } = Layout;
@@ -17,24 +18,25 @@ interface NavItem {
   label: string;
   icon: React.ReactNode;
   section: string;
+  module?: string; // 对应权限矩阵的模块 key
   roles: Role[];
 }
 
 const NAV: NavItem[] = [
   { key: '/',              label: '概览',       icon: <DashboardOutlined />,    section: '概览',  roles: ['boss','finance','warehouse','sales'] },
-  { key: '/products',      label: '产品',       icon: <AppstoreOutlined />,     section: '产品',  roles: ['boss','finance','warehouse','sales'] },
-  { key: '/purchase',      label: '采购',       icon: <ShoppingCartOutlined />, section: '采购',  roles: ['boss','finance','warehouse'] },
-  { key: '/suppliers',     label: '供应商',     icon: <ShopOutlined />,         section: '采购',  roles: ['boss','finance','warehouse'] },
-  { key: '/inventory',     label: '库存',       icon: <ContainerOutlined />,    section: '仓储',  roles: ['boss','finance','warehouse'] },
-  { key: '/movements',     label: '出入库',     icon: <FileTextOutlined />,     section: '仓储',  roles: ['boss','finance','warehouse'] },
-  { key: '/media',         label: '图片资料',   icon: <PictureOutlined />,      section: '仓储',  roles: ['boss','finance','warehouse'] },
-  { key: '/sales',         label: '销售',       icon: <ShoppingOutlined />,     section: '销售',  roles: ['boss','finance','sales'] },
-  { key: '/customers',     label: '客户',       icon: <TeamOutlined />,         section: '销售',  roles: ['boss','finance','sales'] },
-  { key: '/salesman',      label: '业绩',       icon: <UserOutlined />,         section: '销售',  roles: ['boss','finance','sales'] },
-  { key: '/commission',    label: '佣金',       icon: <AccountBookOutlined />,  section: '销售',  roles: ['boss','finance','sales'] },
-  { key: '/finance/receive',label: '收款',      icon: <DollarOutlined />,       section: '财务',  roles: ['boss','finance'] },
-  { key: '/finance/pay',   label: '付款',       icon: <DollarOutlined />,       section: '财务',  roles: ['boss','finance'] },
-  { key: '/finance/ledger',label: '账户流水',   icon: <AccountBookOutlined />,  section: '财务',  roles: ['boss','finance'] },
+  { key: '/products',      label: '产品',       icon: <AppstoreOutlined />,     section: '产品',  module: 'products',  roles: ['boss','finance','warehouse','sales'] },
+  { key: '/purchase',      label: '采购',       icon: <ShoppingCartOutlined />, section: '采购',  module: 'purchase',  roles: ['boss','finance','warehouse'] },
+  { key: '/suppliers',     label: '供应商',     icon: <ShopOutlined />,         section: '采购',  module: 'suppliers', roles: ['boss','finance','warehouse'] },
+  { key: '/inventory',     label: '库存',       icon: <ContainerOutlined />,    section: '仓储',  module: 'inventory', roles: ['boss','finance','warehouse'] },
+  { key: '/movements',     label: '出入库',     icon: <FileTextOutlined />,     section: '仓储',  module: 'inventory', roles: ['boss','finance','warehouse'] },
+  { key: '/media',         label: '图片资料',   icon: <PictureOutlined />,      section: '仓储',  module: 'inventory', roles: ['boss','finance','warehouse'] },
+  { key: '/sales',         label: '销售',       icon: <ShoppingOutlined />,     section: '销售',  module: 'sales',     roles: ['boss','finance','sales'] },
+  { key: '/customers',     label: '客户',       icon: <TeamOutlined />,         section: '销售',  module: 'customers', roles: ['boss','finance','sales'] },
+  { key: '/salesman',      label: '业绩',       icon: <UserOutlined />,         section: '销售',  module: 'sales',     roles: ['boss','finance','sales'] },
+  { key: '/commission',    label: '佣金',       icon: <AccountBookOutlined />,  section: '销售',  module: 'sales',     roles: ['boss','finance','sales'] },
+  { key: '/finance/receive',label: '收款',      icon: <DollarOutlined />,       section: '财务',  module: 'finance',   roles: ['boss','finance'] },
+  { key: '/finance/pay',   label: '付款',       icon: <DollarOutlined />,       section: '财务',  module: 'finance',   roles: ['boss','finance'] },
+  { key: '/finance/ledger',label: '账户流水',   icon: <AccountBookOutlined />,  section: '财务',  module: 'finance',   roles: ['boss','finance'] },
 
   { key: '/settings/users',label: '用户权限',   icon: <SettingOutlined />,      section: '系统',  roles: ['boss'] },
 ];
@@ -56,7 +58,12 @@ export default function MainLayout() {
     if (!user) return [];
     return SECTION_ORDER.map(name => ({
       name,
-      items: NAV.filter(n => n.section === name && n.roles.includes(user.role)),
+      items: NAV.filter(n => {
+        if (n.section !== name) return false;
+        // 无 module 的（概览/用户权限）用角色数组；有 module 的走权限矩阵
+        if (!n.module) return n.roles.includes(user.role);
+        return canView(user.role, n.module);
+      }),
     })).filter(s => s.items.length > 0);
   }, [user]);
 

@@ -2,6 +2,7 @@ import { Card, Table, Tag, Input, Select, Space, Button, Popconfirm, App } from 
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
+import { canEdit as canEditPerm } from '@/utils/permissions';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
@@ -9,7 +10,7 @@ export default function Products() {
   const nav = useNavigate();
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = user.role === 'boss'; // 仅老板可编辑
+  const canEdit = canEditPerm(user.role, 'products');
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [kw, setKw] = useState('');
