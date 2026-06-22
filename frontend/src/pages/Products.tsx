@@ -1,12 +1,15 @@
 import { Card, Table, Tag, Input, Select, Space, Button, Popconfirm, App } from 'antd';
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/store';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
 export default function Products() {
   const nav = useNavigate();
   const { message } = App.useApp();
+  const user = useAuth(s => s.user)!;
+  const canEdit = user.role !== 'finance';
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [kw, setKw] = useState('');
@@ -78,7 +81,7 @@ export default function Products() {
           <Select placeholder="产地" value={origin} onChange={setOrigin} allowClear style={{ width: 130 }}>
             {origins.map(o => <Select.Option key={o} value={o}>{o}</Select.Option>)}
           </Select>
-          <Button type="primary" onClick={openNew}>+ 新增产品</Button>
+          {canEdit && <Button type="primary" onClick={openNew}>+ 新增产品</Button>}
         </Space>
       }
     >
@@ -120,7 +123,7 @@ export default function Products() {
           { title: '库存(吨)', dataIndex: 'qty_per_unit', width: 100, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v} 吨</span> },
           {
             title: '操作', width: 140, align: 'right' as const, fixed: 'right' as const,
-            render: (_: any, r: any) => (
+            render: (_: any, r: any) => !canEdit ? null : (
               <Space onClick={e => e.stopPropagation()}>
                 <Button size="small" onClick={e => openEdit(r, e)}>编辑</Button>
                 <Popconfirm title="删除该产品？" onConfirm={e => remove(r.id, e)}>

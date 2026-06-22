@@ -2,12 +2,15 @@ import { Card, Descriptions, Table, Tabs, Tag, Image, Empty, Button, Input, Inpu
 import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/store';
 import { api } from '@/api/client';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
   const { message } = App.useApp();
+  const user = useAuth(s => s.user)!;
+  const canEdit = user.role !== 'finance';
   const [product, setProduct] = useState<any>(null);
   const [prices, setPrices] = useState<any[]>([]);
   const [editPrices, setEditPrices] = useState<any[]>([]);
@@ -85,12 +88,14 @@ export default function ProductDetail() {
             key: 'price', label: '价格',
             children: (
               <>
-                <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
-                  <Button size="small" icon={<PlusOutlined />} onClick={addPrice}>添加价格</Button>
-                  {priceDirty && <Button size="small" type="primary" onClick={savePrices}>保存价格</Button>}
-                </div>
+                {canEdit && (
+                  <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between' }}>
+                    <Button size="small" icon={<PlusOutlined />} onClick={addPrice}>添加价格</Button>
+                    {priceDirty && <Button size="small" type="primary" onClick={savePrices}>保存价格</Button>}
+                  </div>
+                )}
                 {editPrices.length === 0 ? (
-                  <Empty description="暂无价格，点击上方添加" />
+                  <Empty description="暂无价格" />
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {editPrices.map((p, i) => (
@@ -104,14 +109,16 @@ export default function ProductDetail() {
                           style={{ width: 160 }}
                           onChange={v => updatePrice(i, 'price', v || 0)}
                           addonBefore="¥"
+                          disabled={!canEdit}
                         />
                         <Input
                           value={p.remark}
                           placeholder="备注（如：1%农副价、散客价）"
                           style={{ flex: 1 }}
                           onChange={e => updatePrice(i, 'remark', e.target.value)}
+                          disabled={!canEdit}
                         />
-                        <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removePrice(i)} />
+                        {canEdit && <Button size="small" danger icon={<DeleteOutlined />} onClick={() => removePrice(i)} />}
                       </div>
                     ))}
                   </div>

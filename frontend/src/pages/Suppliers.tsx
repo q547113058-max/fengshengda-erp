@@ -1,10 +1,13 @@
 import { Card, Table, Tag, Space, Button, Popconfirm, App } from 'antd';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/store';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
 export default function Suppliers() {
   const { message } = App.useApp();
+  const user = useAuth(s => s.user)!;
+  const canEdit = user.role !== 'finance';
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +46,7 @@ export default function Suppliers() {
   return (
     <Card
       title="供应商管理"
-      extra={<Button type="primary" onClick={() => { setEditing(null); setModalOpen(true); }}>+ 新增供应商</Button>}
+      extra={canEdit && <Button type="primary" onClick={() => { setEditing(null); setModalOpen(true); }}>+ 新增供应商</Button>}
     >
       <Table
         size="small"
@@ -69,7 +72,7 @@ export default function Suppliers() {
             const u = summary(r.id).unpaid;
             return u > 0 ? <span className="text-burgundy" style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>¥ {u.toLocaleString()}</span> : <span className="text-moss">¥ 0</span>;
           } },
-          { title: '操作', width: 140, align: 'right' as const, fixed: 'right' as const, render: (_: any, r: any) => (
+          { title: '操作', width: 140, align: 'right' as const, fixed: 'right' as const, render: (_: any, r: any) => !canEdit ? null : (
             <Space onClick={e => e.stopPropagation()}>
               <Button size="small" onClick={() => { setEditing(r); setModalOpen(true); }}>编辑</Button>
               <Popconfirm title="删除该供应商？" onConfirm={e => remove(r.id, e)}>
