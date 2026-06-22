@@ -18,10 +18,9 @@ export default function Dashboard() {
       .then(setKpi)
       .catch(async (e: any) => {
         console.error(e);
-        // 401 = token 失效 → 强制重新登录
+        // 401 = token 失效 → 清 store + token + 跳登录
         if (e?.status === 401) {
-          // 清 store + token + 跳登录
-          try { localStorage.removeItem('fsd-token'); } catch { /* ignore */ }
+          useAuth.getState().logout();
           nav('/login', { replace: true });
         }
       })

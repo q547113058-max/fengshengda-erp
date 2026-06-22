@@ -35,13 +35,16 @@ function Guard({ roles, children }: { roles: Role[]; children: ReactNode }) {
   const loc = useLocation();
   const nav = useNavigate();
 
+  // 检查 token 是否存在（JWT 24h 过期后 user 仍在 localStorage 但 token 没了）
+  const hasToken = (() => { try { return !!localStorage.getItem('fsd-token'); } catch { return false; } })();
+
   // 在 useEffect 里跳转（避免 render 阶段 setState-during-render 警告）
   useEffect(() => {
-    if (!user) nav('/login', { replace: true, state: { from: loc.pathname } });
+    if (!user || !hasToken) nav('/login', { replace: true, state: { from: loc.pathname } });
     else if (!roles.includes(user.role)) nav('/', { replace: true });
-  }, [user, roles, nav, loc.pathname]);
+  }, [user, hasToken, roles, nav, loc.pathname]);
 
-  if (!user) return null;
+  if (!user || !hasToken) return null;
   if (!roles.includes(user.role)) return null;
   return <>{children}</>;
 }
@@ -74,7 +77,7 @@ export default function App() {
           <Route path="/finance/pay" element={<Guard roles={['boss','finance']}><FinancePay /></Guard>} />
           <Route path="/finance/ledger" element={<Guard roles={['boss','finance']}><AccountLedger /></Guard>} />
 
-          <Route path="/settings/users" element={<Guard roles={['boss']}><UserSettings /></Guard>} />
+          <Route path="/settings/users" element={<UserSettings />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
