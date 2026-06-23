@@ -55,7 +55,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('api/docs', app, document, { useGlobalPrefix: false });
 
-  const port = Number(process.env.PORT || 3003);
+  const port = Number(process.env.PORT || 3001);
   await app.listen(port, '0.0.0.0');
 
   // 用 pino logger 输出启动信息

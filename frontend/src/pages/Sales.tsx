@@ -1,8 +1,7 @@
-import { Card, Table, Tag, Space, Button, App, Select, Modal, Form, InputNumber } from 'antd';
+import { Card, Table, Tag, Space, Button, App, Select, Modal, Form, InputNumber, Input } from 'antd';
 import { useEffect, useState, useMemo } from 'react';
 import { api } from '@/api/client';
 import { useAuth } from '@/store';
-import EditModal, { FieldDef } from '@/components/EditModal';
 
 const STATUS: Record<string, { label: string; color: string }> = {
   done:    { label: '已收', color: 'success' },
@@ -21,10 +20,15 @@ export default function Sales() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusF, setStatusF] = useState<string>('');
+  const [monthF, setMonthF] = useState<string>('');
+  const [customerF, setCustomerF] = useState<number | null>(null);
+  const today = new Date().toISOString().slice(0, 10);
   const [modalOpen, setModalOpen] = useState(false);
   const [recOpen, setRecOpen] = useState(false);
   const [receiving, setReceiving] = useState<any>(null);
   const [recForm] = Form.useForm();
+  const [saleForm] = Form.useForm();
+  const [selectedQty, setSelectedQty] = useState<number>(1);
 
   const reload = () => {
     setLoading(true);
@@ -37,8 +41,10 @@ export default function Sales() {
   const filtered = useMemo(() => {
     let arr = user.role === 'sales' ? list.filter(o => o.sales_user_id === user.id) : list;
     if (statusF) arr = arr.filter(o => o.receive_status === statusF);
+    if (monthF) arr = arr.filter(o => o.sale_date?.startsWith(monthF));
+    if (customerF) arr = arr.filter(o => o.customer_id === customerF);
     return arr;
-  }, [list, user, statusF]);
+  }, [list, user, statusF, monthF, customerF]);
 
   const pname = (id: number) => { const p = products.find(x => x.id === id); return p ? `${p.category} · ${p.factory_code}` : `#${id}`; };
   const cname = (id: number) => customers.find(x => x.id === id)?.name || `#${id}`;
@@ -48,21 +54,7 @@ export default function Sales() {
   const totalReceived = filtered.reduce((a, b) => a + b.received_amount, 0);
   const totalUnpaid = totalAmt - totalReceived;
 
-  const fields: FieldDef[] = [
-    { name: 'customer_id',  label: '客户', type: 'select', required: true, options: customers.map(c => ({ value: c.id, label: c.name })) },
-    { name: 'sales_user_id',label: '业务员', type: 'select', required: true, options: users.filter(u => u.role === 'sales').map(u => ({ value: u.id, label: u.full_name })) },
-    { name: 'product_id',   label: '产品', type: 'select', required: true, options: products.map(p => ({ value: p.id, label: `${p.category} · ${p.factory_code}` })) },
-    { name: 'batch_id',     label: '批次', type: 'select', required: true,
-      options: batches.filter(b => b.qty_remaining > 0).map(b => ({ value: b.id, label: `${b.batch_no} (剩 ${b.qty_remaining} 吨)` })) },
-    { name: 'qty',          label: '数量（吨）', type: 'number', required: true, min: 1 },
-    { name: 'sale_price',   label: '销售单价', type: 'number', required: true, min: 0, step: 0.01 },
-    { name: 'tax_rate',     label: '税率', type: 'select', options: [{ value: 1, label: '1% 农副' }, { value: 9, label: '9% 一般' }] },
-    { name: 'commission_rate', label: '佣金比例(%)', type: 'number', min: 0, step: 0.1 },
-    { name: 'sale_date',    label: '销售日期', type: 'date' },
-    { name: 'received_amount', label: '已收金额', type: 'number', min: 0, step: 0.01, initialValue: 0 },
-    { name: 'account_id',   label: '收款账户（若已收款）', type: 'select', options: accounts.map(a => ({ value: a.id, label: a.name })) },
-    { name: 'remark',       label: '备注', type: 'textarea' },
-  ];
+  const fields: any[] = [];
 
   // 收款
   const openReceive = (o: any) => {
@@ -93,6 +85,34 @@ export default function Sales() {
             <Select.Option value="partial">部分</Select.Option>
             <Select.Option value="done">已收</Select.Option>
           </Select>
+          <Select
+            placeholder="按月份"
+            value={monthF || undefined}
+            onChange={setMonthF}
+            allowClear
+            style={{ width: 130 }}
+            showSearch
+            filterOption={(input, option) => String(option?.label ?? '').includes(input)}
+          >
+            {Array.from(new Set(list.map(o => o.sale_date?.slice(0, 7)).filter(Boolean)))
+              .sort()
+              .reverse()
+              .map(m => (
+                <Select.Option key={m} value={m} label={m}>
+                  {m}
+                </Select.Option>
+              ))}
+          </Select>
+          <Select
+            placeholder="按客户"
+            value={customerF ?? undefined}
+            onChange={setCustomerF}
+            allowClear
+            style={{ width: 160 }}
+            showSearch
+            filterOption={(input, option) => String(option?.label ?? '').includes(input)}
+            options={customers.map(c => ({ value: c.id, label: c.name }))}
+          />
           <Button type="primary" onClick={() => setModalOpen(true)}>+ 新建销售</Button>
         </Space>
       }
@@ -125,19 +145,100 @@ export default function Sales() {
           )},
         ]}
       />
-      <EditModal
+      <Modal
         open={modalOpen}
         title="新建销售单"
-        fields={fields}
-        initial={{ tax_rate: 1, sale_date: new Date().toISOString().slice(0, 10) }}
-        onCancel={() => setModalOpen(false)}
-        onSubmit={async (v) => {
-          // 提交时附 customer_name 用于 counter_party
-          const c = customers.find(x => x.id === +v.customer_id);
-          await api.create('sales', { ...v, counter_party: c?.name });
-          reload();
+        onCancel={() => { setModalOpen(false); }}
+        onOk={async () => {
+          try {
+            const v = await saleForm.validateFields();
+            const c = customers.find(x => x.id === +v.customer_id);
+            await api.create('sales', {
+              ...v,
+              sales_user_id: user.id,
+              counter_party: c?.name,
+              sale_date: v.sale_date?.format('YYYY-MM-DD'),
+              batch_id: null,
+            });
+            saleForm.resetFields();
+            setModalOpen(false);
+            reload();
+          } catch (e: any) {
+            if (e?.errorFields) return;
+            message.error(e?.message || '保存失败');
+          }
         }}
-      />
+        okText="保存"
+        cancelText="取消"
+        destroyOnHidden
+        width={620}
+      >
+        <Form form={saleForm} layout="vertical" style={{ paddingTop: 12 }}>
+          <Form.Item name="customer_id" label="客户" rules={[{ required: true, message: '请选择客户' }]}>
+            <Select placeholder="请选择客户" showSearch filterOption={(i, o) => String(o?.label ?? '').includes(i)} options={customers.map(c => ({ value: c.id, label: c.name }))} />
+          </Form.Item>
+
+          <Form.Item name="product_id" label="产品" rules={[{ required: true, message: '请选择产品' }]}>
+            <Select
+              placeholder="请选择产品"
+              showSearch
+              filterOption={(i, o) => String(o?.label ?? '').includes(i)}
+              options={products.map(p => ({ value: p.id, label: `${p.category} · ${p.factory_code}` }))}
+              onChange={(val) => { saleForm.setFieldsValue({ sale_price: undefined }); }}
+            />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.product_id !== curr.product_id}>
+            {({ getFieldValue }) => {
+              const pid = getFieldValue('product_id');
+              const product = products.find(p => p.id === pid);
+              const priceOptions = product?.prices?.length
+                ? product.prices.map((px: any) => ({ value: px.price, label: `¥${px.price.toFixed(2)}${px.remark ? ` — ${px.remark}` : ''}` }))
+                : [];
+              return (
+                <Form.Item name="sale_price" label="销售单价" rules={[{ required: true, message: '请选择或输入单价' }]}>
+                  <Select
+                    placeholder="请选择报价或输入单价"
+                    showSearch
+                    allowClear
+                    filterOption={(i, o) => String(o?.label ?? '').includes(i)}
+                    options={priceOptions}
+                    onChange={(val) => { if (val) { setSelectedQty(getFieldValue('qty') || 1); } }}
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <div style={{ padding: '8px 12px', borderTop: '1px solid var(--line)', color: 'var(--ink-3)', fontSize: 12 }}>
+                          或直接输入任意单价
+                        </div>
+                      </>
+                    )}
+                  />
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
+          <Form.Item name="qty" label="数量（吨）" rules={[{ required: true, message: '请输入数量' }]} initialValue={1}>
+            <InputNumber min={1} style={{ width: '100%' }} onChange={(val) => setSelectedQty(val || 1)} />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.qty !== curr.qty || prev.sale_price !== curr.sale_price}>
+            {({ getFieldValue }) => {
+              const qty = getFieldValue('qty') || 0;
+              const price = getFieldValue('sale_price') || 0;
+              const receivable = qty * price;
+              return (
+                <Form.Item label="应收金额">
+                  <Input value={receivable > 0 ? `¥ ${receivable.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'} disabled style={{ color: 'var(--copper)', fontWeight: 600 }} />
+                </Form.Item>
+              );
+            }}
+          </Form.Item>
+          <Form.Item name="sale_date" label="销售日期" initialValue={today}>
+            <Input type="date" />
+          </Form.Item>
+          <Form.Item name="remark" label="备注">
+            <Input.TextArea rows={2} placeholder="可选" />
+          </Form.Item>
+        </Form>
+      </Modal>
       <Modal
         open={recOpen}
         title={`登记收款 · ${receiving?.so_no || ''}`}

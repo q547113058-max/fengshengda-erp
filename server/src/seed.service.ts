@@ -50,10 +50,11 @@ export class SeedService implements OnApplicationBootstrap {
     const demoHash = await bcrypt.hash('demo', 10);
     const users = await this.users.save([
       { id: 1, username: 'boss',      full_name: '梁总',   role: 'boss',      default_commission_rate: 0,   phone: '13800000001', password_hash: demoHash },
-      { id: 2, username: 'finance',   full_name: '陈会计', role: 'finance',   default_commission_rate: 0,   phone: '13800000002', password_hash: demoHash },
-      { id: 3, username: 'warehouse', full_name: '黄仓管', role: 'warehouse', default_commission_rate: 0,   phone: '13800000003', password_hash: demoHash },
-      { id: 4, username: 'sales01',   full_name: '李业务', role: 'sales',     default_commission_rate: 3,   phone: '13800000004', password_hash: demoHash },
-      { id: 5, username: 'sales02',   full_name: '王业务', role: 'sales',     default_commission_rate: 2.5, phone: '13800000005', password_hash: demoHash },
+      { id: 2, username: 'admin',     full_name: '张主管', role: 'admin',     default_commission_rate: 0,   phone: '13800000006', password_hash: demoHash },
+      { id: 3, username: 'finance',   full_name: '陈会计', role: 'finance',   default_commission_rate: 0,   phone: '13800000002', password_hash: demoHash },
+      { id: 4, username: 'warehouse', full_name: '黄仓管', role: 'warehouse', default_commission_rate: 0,   phone: '13800000003', password_hash: demoHash },
+      { id: 5, username: 'sales01',   full_name: '李业务', role: 'sales',     default_commission_rate: 3,   phone: '13800000004', password_hash: demoHash },
+      { id: 6, username: 'sales02',   full_name: '王业务', role: 'sales',     default_commission_rate: 2.5, phone: '13800000005', password_hash: demoHash },
     ]);
 
     // === 产品 ===
@@ -138,11 +139,11 @@ export class SeedService implements OnApplicationBootstrap {
 
     // === 客户 ===
     await this.customers.save([
-      { id: 1, name: '佛山南海食杂批发部',     contact_name: '刘老板', phone: '13900001001', address: '佛山市南海区里水镇',   type: '批发商', nature: '个体户', sales_user_id: 4, remark: '月结客户' },
-      { id: 2, name: '中山华联连锁商超',       contact_name: '张采购', phone: '13900001002', address: '中山市石岐区',           type: '商超',   nature: '国企',   sales_user_id: 5, remark: '直供' },
-      { id: 3, name: '广州越秀零食批发',       contact_name: '陈老板', phone: '13900001003', address: '广州市越秀区一德路',     type: '批发商', nature: '个体户', sales_user_id: 4, remark: '老客户' },
-      { id: 4, name: '开平本地餐饮连锁',       contact_name: '吴总',   phone: '13900001004', address: '开平市长沙区',           type: '餐饮',   nature: '个体户', sales_user_id: 5, remark: '需冷链配送' },
-      { id: 5, name: '江门蓬江夜市档口联盟',   contact_name: '许经理', phone: '13900001005', address: '江门市蓬江区',           type: '餐饮',   nature: '国企',   sales_user_id: 4, remark: '团购大客户' },
+      { id: 1, code: 'CU260608-001', name: '佛山南海食杂批发部', contact_name: '刘老板', phone: '13900001001', address: '佛山市南海区里水镇', type: '贸易商', sales_user_id: 4, created_by_user_id: 4, remark: '月结客户' },
+      { id: 2, code: 'CU260608-002', name: '中山华联连锁商超', contact_name: '张采购', phone: '13900001002', address: '中山市石岐区', type: '商超', sales_user_id: 5, created_by_user_id: 5, remark: '直供' },
+      { id: 3, code: 'CU260608-003', name: '广州越秀零食批发', contact_name: '陈老板', phone: '13900001003', address: '广州市越秀区一德路', type: '贸易商', sales_user_id: 4, created_by_user_id: 4, remark: '老客户' },
+      { id: 4, code: 'CU260608-004', name: '开平本地餐饮连锁', contact_name: '吴总', phone: '13900001004', address: '开平市长沙区', type: '餐饮', sales_user_id: 5, created_by_user_id: 5, remark: '需冷链配送' },
+      { id: 5, code: 'CU260608-005', name: '江门蓬江夜市档口联盟', contact_name: '许经理', phone: '13900001005', address: '江门市蓬江区', type: '餐饮', sales_user_id: 4, created_by_user_id: 4, remark: '团购大客户' },
     ]);
 
     // === 销售单 ===

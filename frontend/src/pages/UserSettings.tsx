@@ -6,9 +6,9 @@ import EditModal, { FieldDef } from '@/components/EditModal';
 import { useAuth } from '@/store';
 import { loadMatrix, saveMatrix, resetMatrix, getDefaults, PermMatrix, PermLevel } from '@/utils/permissions';
 
-const ROLE_LABEL: Record<string, string> = { boss: '老板', finance: '财务', warehouse: '仓储', sales: '销售' };
-const ROLE_COLOR: Record<string, string> = { boss: 'gold', finance: 'blue', warehouse: 'green', sales: 'default' };
-const ROLES = ['boss', 'finance', 'warehouse', 'sales'];
+const ROLE_LABEL: Record<string, string> = { boss: '老板', admin: '管理员', finance: '财务', warehouse: '仓储', sales: '销售' };
+const ROLE_COLOR: Record<string, string> = { boss: 'gold', admin: 'orange', finance: 'blue', warehouse: 'green', sales: 'default' };
+const ROLES = ['boss', 'admin', 'finance', 'warehouse', 'sales'];
 
 const MODULES = [
   { key: 'products',  label: '产品' },
@@ -34,6 +34,8 @@ export default function UserSettings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const currentUser = useAuth(s => s.user);
   const isBoss = currentUser?.role === 'boss';
+  const isAdmin = currentUser?.role === 'admin';
+  const canManage = isBoss || isAdmin;
   const nav = useNavigate();
 
   const reload = () => {
@@ -71,12 +73,13 @@ export default function UserSettings() {
     { name: 'new_password', label: '新密码', type: 'password', placeholder: '不改密请留空' },
   ];
 
-  // boss 管理字段（改别人）
-  const bossFields: FieldDef[] = [
+  // boss/admin 管理字段（改别人）
+  const bossAdminFields: FieldDef[] = [
     { name: 'full_name', label: '姓名', required: true },
     { name: 'phone', label: '电话' },
     { name: 'role', label: '角色', type: 'select', options: [
-      { value: 'boss', label: '老板' }, { value: 'finance', label: '财务' },
+      { value: 'boss', label: '老板' }, { value: 'admin', label: '管理员' },
+      { value: 'finance', label: '财务' },
       { value: 'warehouse', label: '仓储' }, { value: 'sales', label: '销售' },
     ]},
     { name: 'default_commission_rate', label: '默认佣金(%)', type: 'number', min: 0, step: 0.5 },
@@ -88,7 +91,10 @@ export default function UserSettings() {
 
   // 判断点的是不是自己
   const isSelf = editing && currentUser && editing.id === currentUser.id;
-  const fields = isSelf ? selfFields : (isBoss ? bossFields : selfFields);
+  const isEditingBoss = editing?.role === 'boss';
+  // admin 不能改老板
+  const canEditTarget = isBoss || (isAdmin && !isEditingBoss);
+  const fields = isSelf ? selfFields : (canEditTarget ? bossAdminFields : selfFields);
 
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -130,6 +136,7 @@ export default function UserSettings() {
     { name: 'password', label: '初始密码', required: true, type: 'password', placeholder: '首次登录密码' },
     { name: 'full_name', label: '姓名', required: true },
     { name: 'role', label: '角色', type: 'select', required: true, options: [
+      ...(isBoss ? [{ value: 'admin', label: '管理员' }] : []),
       { value: 'finance', label: '财务' },
       { value: 'warehouse', label: '仓储' },
       { value: 'sales', label: '销售' },
@@ -138,7 +145,7 @@ export default function UserSettings() {
     { name: 'default_commission_rate', label: '默认佣金(%)', type: 'number', min: 0, step: 0.5 },
   ];
 
-  if (!isBoss) {
+  if (!canManage) {
     // 非 boss：只显示个人资料弹窗
     return (
       <EditModal
@@ -185,11 +192,15 @@ export default function UserSettings() {
                     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => <Tag color={v === 'active' ? 'success' : 'default'}>{v === 'active' ? '正常' : v}</Tag> },
                     {
                       title: '操作', width: 110, align: 'right' as const,
-                      render: (_: any, r: any) => (
-                        <Button size="small" onClick={() => { setEditing(r); setModalOpen(true); }}>
-                          {currentUser?.id === r.id ? '我的资料' : '编辑'}
-                        </Button>
-                      ),
+                      render: (_: any, r: any) => {
+                        // admin 不能编辑老板
+                        if (isAdmin && r.role === 'boss') return <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>—</span>;
+                        return (
+                          <Button size="small" onClick={() => { setEditing(r); setModalOpen(true); }}>
+                            {currentUser?.id === r.id ? '我的资料' : '编辑'}
+                          </Button>
+                        );
+                      },
                     },
                   ]}
                 />
@@ -248,11 +259,13 @@ export default function UserSettings() {
                       render: (_: any, r: any) => {
                         const p: PermLevel = r.mods[m.key];
                         const info = PERM_LABEL[p as string];
+                        // boss 行不允许任何人改；admin 行只允许 boss 改
+                        const locked = r.role === 'boss' || (r.role === 'admin' && !isBoss);
                         return (
                           <span
-                            onClick={() => { if (r.role !== 'boss') togglePerm(r.role, m.key); }}
+                            onClick={() => { if (!locked) togglePerm(r.role, m.key); }}
                             style={{
-                              cursor: r.role === 'boss' ? 'default' : 'pointer',
+                              cursor: locked ? 'default' : 'pointer',
                               color: info?.color || 'var(--ink-3)',
                               fontWeight: info ? 500 : undefined,
                               padding: '2px 8px',

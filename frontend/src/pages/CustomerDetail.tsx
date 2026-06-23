@@ -59,13 +59,14 @@ export default function CustomerDetail() {
       }
     >
       <Descriptions column={3} bordered size="small">
+        <Descriptions.Item label="客户编号" span={2}><span style={{ fontFamily: 'var(--font-mono)' }}>{customer.code}</span></Descriptions.Item>
         <Descriptions.Item label="客户名称">{customer.name}</Descriptions.Item>
         <Descriptions.Item label="联系人">{customer.contact_name || '—'}</Descriptions.Item>
         <Descriptions.Item label="电话">{customer.phone || '—'}</Descriptions.Item>
         <Descriptions.Item label="地址" span={2}>{customer.address || '—'}</Descriptions.Item>
         <Descriptions.Item label="客户类型"><Tag color="processing">{customer.type}</Tag></Descriptions.Item>
-        <Descriptions.Item label="客户性质"><Tag color={customer.nature === '国企' ? 'gold' : 'default'}>{customer.nature}</Tag></Descriptions.Item>
         <Descriptions.Item label="所属业务员">{uname(customer.sales_user_id)}</Descriptions.Item>
+
         <Descriptions.Item label="备注" span={3}>{customer.remark || '—'}</Descriptions.Item>
       </Descriptions>
 

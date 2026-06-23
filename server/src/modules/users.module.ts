@@ -16,7 +16,11 @@ class UsersController {
 
   @Post()
   async create(@Body() body: any, @GetUser() caller: any) {
-    if (caller.role !== 'boss') throw new ForbiddenException('仅老板可新增用户');
+    if (caller.role !== 'boss' && caller.role !== 'admin') throw new ForbiddenException('仅老板/管理员可新增用户');
+    // admin 不能创建 boss 或 admin 角色
+    if (caller.role === 'admin' && (body.role === 'boss' || body.role === 'admin')) {
+      throw new ForbiddenException('管理员不能创建老板或管理员账号');
+    }
     if (!body.username || !body.password || !body.full_name || !body.role) {
       throw new BadRequestException('工号、密码、姓名、角色必填');
     }
@@ -38,22 +42,29 @@ class UsersController {
   @Put(':id')
   async update(@Param('id') id: string, @Body() body: any, @GetUser() caller: any) {
     const targetId = Number(id);
-    // 只能改自己，boss 能改所有人
-    if (caller.role !== 'boss' && caller.sub !== targetId) {
+    // 只能改自己，boss/admin 能改别人
+    if (caller.role !== 'boss' && caller.role !== 'admin' && caller.sub !== targetId) {
       throw new ForbiddenException('只能修改自己的资料');
+    }
+    // admin 不能改老板
+    if (caller.role === 'admin') {
+      const target = await this.repo.findOneBy({ id: targetId });
+      if (target?.role === 'boss') throw new ForbiddenException('管理员不能修改老板信息');
+      // admin 也不能把自己或别人改成 boss/admin
+      if (body.role === 'boss' || body.role === 'admin') throw new ForbiddenException('管理员不能设置老板/管理员角色');
     }
     const patch: any = {};
     if (body.full_name !== undefined) patch.full_name = body.full_name;
     if (body.phone !== undefined) patch.phone = body.phone;
     if (body.default_commission_rate !== undefined) patch.default_commission_rate = body.default_commission_rate;
-    // boss 专属：改角色/状态
-    if (caller.role === 'boss') {
+    // boss/admin 专属：改角色/状态
+    if (caller.role === 'boss' || caller.role === 'admin') {
       if (body.role !== undefined) patch.role = body.role;
       if (body.status !== undefined) patch.status = body.status;
     }
-    // 改密码（需验证旧密码，boss 可跳过）
+    // 改密码（需验证旧密码，boss/admin 可跳过）
     if (body.new_password) {
-      if (caller.role !== 'boss') {
+      if (caller.role !== 'boss' && caller.role !== 'admin') {
         if (!body.old_password) throw new ForbiddenException('请输入旧密码');
         const u = await this.repo.createQueryBuilder('u').addSelect('u.password_hash').where('u.id = :id', { id: targetId }).getOne();
         if (!u || !(await bcrypt.compare(body.old_password, u.password_hash))) {

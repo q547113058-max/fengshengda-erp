@@ -2,7 +2,7 @@
 import * as supertest from 'supertest';
 import { INestApplication } from '@nestjs/common';
 
-export type Role = 'boss' | 'finance' | 'warehouse' | 'sales';
+export type Role = 'boss' | 'admin' | 'finance' | 'warehouse' | 'sales';
 
 const ACCOUNTS: Record<string, string> = {
   boss: 'demo',

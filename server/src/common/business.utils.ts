@@ -35,7 +35,6 @@ export async function genOrderNo(
   const yy = date.replace(/-/g, '').slice(2); // YYMMDD
   const isMySQL = mgr.connection.options.type === 'mysql';
 
-  // 1. 取行（带锁或 upsert）
   let row = isMySQL
     ? await mgr.findOne(OrderSequence, {
         where: { prefix, ymd: yy },
@@ -44,21 +43,49 @@ export async function genOrderNo(
     : await mgr.findOne(OrderSequence, { where: { prefix, ymd: yy } });
 
   if (!row) {
-    // 第一次：初始化 last_seq = 1
     try {
       row = await mgr.save(
         mgr.create(OrderSequence, { prefix, ymd: yy, last_seq: 1 }),
       );
     } catch {
-      // 并发：别的 tx 先 insert 了，重试
       row = await mgr.findOneOrFail(OrderSequence, { where: { prefix, ymd: yy } });
     }
     return `${prefix}${yy}-${String(row.last_seq).padStart(3, '0')}`;
   }
 
-  // 2. 已有：last_seq + 1
   row.last_seq += 1;
   await mgr.save(OrderSequence, row);
   return `${prefix}${yy}-${String(row.last_seq).padStart(3, '0')}`;
 }
 
+/**
+ * 客户编号生成 — 用独立序列表 + 行锁保证并发安全
+ * 规则：CU + YYMMDD + 3 位序号
+ */
+export async function genCustomerCode(mgr: EntityManager): Promise<string> {
+  const ymd = new Date().toISOString().slice(0, 10).replace(/-/g, '').slice(2); // YYMMDD
+  const prefix = 'CU';
+  const isMySQL = mgr.connection.options.type === 'mysql';
+
+  let row = isMySQL
+    ? await mgr.findOne(OrderSequence, {
+        where: { prefix, ymd },
+        lock: { mode: 'pessimistic_write' },
+      })
+    : await mgr.findOne(OrderSequence, { where: { prefix, ymd } });
+
+  if (!row) {
+    try {
+      row = await mgr.save(
+        mgr.create(OrderSequence, { prefix, ymd, last_seq: 1 }),
+      );
+    } catch {
+      row = await mgr.findOneOrFail(OrderSequence, { where: { prefix, ymd } });
+    }
+    return `${prefix}${ymd}-${String(row.last_seq).padStart(3, '0')}`;
+  }
+
+  row.last_seq += 1;
+  await mgr.save(OrderSequence, row);
+  return `${prefix}${ymd}-${String(row.last_seq).padStart(3, '0')}`;
+}

@@ -10,6 +10,7 @@ const MODULE_KEYS = ['products','purchase','suppliers','inventory','sales','cust
 
 const DEFAULTS: PermMatrix = {
   boss:      { products:'e', purchase:'e', suppliers:'e', inventory:'e', sales:'e', customers:'e', finance:'e' },
+  admin:     { products:'e', purchase:'e', suppliers:'e', inventory:'e', sales:'e', customers:'e', finance:'e' },
   finance:   { products:'v', purchase:'v', suppliers:'v', inventory:'v', sales:'v', customers:'v', finance:'e' },
   warehouse: { products:'v', purchase:'v', suppliers:'v', inventory:'e' },
   sales:     { products:'v', sales:'e', customers:'e' },

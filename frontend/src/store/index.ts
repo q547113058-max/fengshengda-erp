@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { api } from '@/api/client';
 
-export type Role = 'boss' | 'finance' | 'warehouse' | 'sales';
+export type Role = 'boss' | 'admin' | 'finance' | 'warehouse' | 'sales';
 
 export interface User {
   id: number;

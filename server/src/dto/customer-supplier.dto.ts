@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsIn, IsInt, Min, IsNumber, IsDateString, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsIn, IsInt, Min, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSupplierDto {
@@ -26,44 +26,37 @@ export class CreateCustomerDto {
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() address?: string;
 
-  @ApiProperty({ enum: ['加工厂', '批发商', '商超', '餐饮'] })
-  @IsIn(['加工厂', '批发商', '商超', '餐饮'])
+  @ApiProperty({ enum: ['国企', '贸易商', '商超', '加工厂', '餐饮'] })
+  @IsIn(['国企', '贸易商', '商超', '加工厂', '餐饮'])
   type: string;
 
-  @ApiProperty({ enum: ['国企', '个体户'] })
-  @IsIn(['国企', '个体户'])
-  nature: string;
+  /** 新建时可选，默认为当前登录用户（后端自动设置） */
+  @ApiPropertyOptional({ description: '所属业务员，新建时默认=当前登录用户', example: 4 })
+  @IsOptional() @IsInt() @Min(1)
+  sales_user_id?: number;
 
-  @ApiProperty({ example: 4, description: '业务员 user_id' })
-  @IsInt() @Min(1)
-  sales_user_id: number;
+  @ApiPropertyOptional({ description: '共享给哪些业务员 ID 列表' })
+  @IsOptional()
+  @IsInt({ each: true })
+  shared_to_user_ids?: number[];
 
   @ApiPropertyOptional() @IsOptional() @IsString() remark?: string;
 }
 
-export class UpdateCustomerDto extends CreateCustomerDto {}
-
-export class CreateUserDto {
-  @ApiProperty({ example: 'newstaff' })
-  @IsString() username: string;
-
-  @ApiProperty({ example: '张三' })
-  @IsString() full_name: string;
-
-  @ApiPropertyOptional({ example: '123456' })
-  @IsOptional() @IsString() password_hash?: string;
-
-  @ApiProperty({ enum: ['boss', 'finance', 'warehouse', 'sales'] })
-  @IsIn(['boss', 'finance', 'warehouse', 'sales'])
-  role: string;
-
-  @ApiPropertyOptional({ example: 0.03 })
-  @IsOptional() @IsNumber() @Min(0)
-  default_commission_rate?: number;
-
+// UpdateCustomerDto: all fields optional except name
+export class UpdateCustomerDto {
+  @ApiPropertyOptional() @IsOptional() @IsString() name?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() contact_name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() phone?: string;
-
-  @ApiPropertyOptional({ enum: ['active', 'disabled'] })
-  @IsOptional() @IsIn(['active', 'disabled'])
-  status?: string;
+  @ApiPropertyOptional() @IsOptional() @IsString() address?: string;
+  @ApiPropertyOptional({ enum: ['国企', '贸易商', '商超', '加工厂', '餐饮'] })
+  @IsOptional() @IsIn(['国企', '贸易商', '商超', '加工厂', '餐饮'])
+  type?: string;
+  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(1)
+  sales_user_id?: number;
+  @ApiPropertyOptional({ description: '共享给哪些业务员 ID 列表' })
+  @IsOptional()
+  @IsInt({ each: true })
+  shared_to_user_ids?: number[];
+  @ApiPropertyOptional() @IsOptional() @IsString() remark?: string;
 }

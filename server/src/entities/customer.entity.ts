@@ -1,13 +1,15 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from './user.entity';
 
-export type CustomerType = '加工厂' | '批发商' | '商超' | '餐饮';
-export type CustomerNature = '国企' | '个体户';
+export type CustomerType = '国企' | '贸易商' | '商超' | '加工厂' | '餐饮';
 
 @Entity('customers')
 export class Customer {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ length: 30 })
+  code: string;
 
   @Column({ length: 120 })
   name: string;
@@ -24,15 +26,17 @@ export class Customer {
   @Column({ length: 20 })
   type: CustomerType;
 
-  @Column({ length: 20 })
-  nature: CustomerNature;
-
+  /** 所属业务员 user_id（新建时默认=当前登录用户） */
   @Column({ name: 'sales_user_id' })
   sales_user_id: number;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'sales_user_id' })
   salesUser: User;
+
+  /** 共享给哪些业务员 ID（逗号分隔字符串） */
+  @Column({ name: 'shared_to_user_ids', type: 'varchar', length: 500, nullable: true })
+  shared_to_user_ids: string | null;
 
   @Column({ type: 'text', nullable: true })
   remark: string;

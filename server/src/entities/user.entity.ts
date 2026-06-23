@@ -3,7 +3,7 @@ import { ProductPrice } from './product-price.entity';
 import { InventoryBatch } from './inventory-batch.entity';
 import { MediaAsset } from './media-asset.entity';
 
-export type Role = 'boss' | 'finance' | 'warehouse' | 'sales';
+export type Role = 'boss' | 'admin' | 'finance' | 'warehouse' | 'sales';
 
 @Entity('users')
 export class User {

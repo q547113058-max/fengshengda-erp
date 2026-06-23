@@ -52,8 +52,6 @@ class DashboardController {
     // 渠道结构
     const byType: Record<string, number> = {};
     for (const c of customers) byType[c.type] = (byType[c.type] || 0) + 1;
-    const byNature: Record<string, number> = {};
-    for (const c of customers) byNature[c.nature] = (byNature[c.nature] || 0) + 1;
 
     // 低库存 Top 5
     const lowStock = products.map(p => ({
@@ -74,7 +72,6 @@ class DashboardController {
       unpaidPoAmt,
       unpaidSoAmt,
       byType,
-      byNature,
       lowStock,
     };
   }

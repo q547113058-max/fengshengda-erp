@@ -63,31 +63,40 @@ export class ProductsService {
     return this.products.findOne({ where: { id } });
   }
 
-  /** 删除产品（事务：关闭 FK → 级联删全部关联 → 恢复 FK） */
+  /** 删除产品（兼容 SQLite/MySQL：FK 在事务外关闭，事务内级联删全部关联数据） */
   async remove(id: number) {
-    return this.ds.transaction(async mgr => {
-      const batches = await mgr.find(InventoryBatch, {
+    const qr = this.ds.createQueryRunner();
+    await qr.connect();
+    const isSQLite = this.ds.options.type === 'better-sqlite3';
+    await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+    await qr.startTransaction();
+    try {
+      const batches = await qr.manager.find(InventoryBatch, {
         where: { product_id: id },
         select: ['id'],
       });
       const batchIds = batches.map(b => b.id);
 
-      await mgr.query('PRAGMA foreign_keys = OFF');
-
       if (batchIds.length > 0) {
-        await mgr.query(`DELETE FROM inventory_movements WHERE batch_id IN (${batchIds.join(',')})`);
-        await mgr.query(`DELETE FROM media_assets WHERE batch_id IN (${batchIds.join(',')})`);
+        await qr.query(`DELETE FROM inventory_movements WHERE batch_id IN (${batchIds.join(',')})`);
+        await qr.query(`DELETE FROM media_assets WHERE batch_id IN (${batchIds.join(',')})`);
       }
-      await mgr.query(`DELETE FROM inventory_batches WHERE product_id = ${id}`);
-      await mgr.query(`DELETE FROM sales_orders WHERE product_id = ${id}`);
-      await mgr.query(`DELETE FROM purchase_orders WHERE product_id = ${id}`);
-      await mgr.query(`DELETE FROM media_assets WHERE product_id = ${id}`);
-      await mgr.query(`DELETE FROM product_prices WHERE product_id = ${id}`);
-      await mgr.query(`DELETE FROM products WHERE id = ${id}`);
+      await qr.query(`DELETE FROM inventory_batches WHERE product_id = ${id}`);
+      await qr.query(`DELETE FROM sales_orders WHERE product_id = ${id}`);
+      await qr.query(`DELETE FROM purchase_orders WHERE product_id = ${id}`);
+      await qr.query(`DELETE FROM media_assets WHERE product_id = ${id}`);
+      await qr.query(`DELETE FROM product_prices WHERE product_id = ${id}`);
+      await qr.query(`DELETE FROM products WHERE id = ${id}`);
 
-      await mgr.query('PRAGMA foreign_keys = ON');
+      await qr.commitTransaction();
       return { ok: true };
-    });
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.query(isSQLite ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+      await qr.release();
+    }
   }
 
   /** 新增税票价 */
