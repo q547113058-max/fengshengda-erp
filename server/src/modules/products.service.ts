@@ -1,6 +1,6 @@
 // ProductsService — 产品/价格业务逻辑
 // 抽离 controller，让 controller 纯做 HTTP 路由 + DTO 验证
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Product } from '../entities/product.entity';
@@ -63,17 +63,40 @@ export class ProductsService {
     return this.products.findOne({ where: { id } });
   }
 
-  /** 删除产品（事务：检查批次引用 + 级联删价格） */
+  /** 删除产品（事务：级联删库存批次 + 流水 + 价格 + 产品） */
   async remove(id: number) {
     return this.ds.transaction(async mgr => {
-      const batchCount = await mgr.count(InventoryBatch, { where: { product_id: id } });
-      if (batchCount > 0) {
-        throw new BadRequestException(
-          `该产品有 ${batchCount} 个库存批次，无法删除。请先清空库存。`,
-        );
+      // 查该产品的所有库存批次 ID
+      const batches = await mgr.find(InventoryBatch, {
+        where: { product_id: id },
+        select: ['id'],
+      });
+      const batchIds = batches.map(b => b.id);
+
+      // SQLite 外键级联：关 FK → 删数据 → 开 FK
+      await mgr.query('PRAGMA foreign_keys = OFF');
+
+      // 删除库存流水
+      if (batchIds.length > 0) {
+        await mgr.createQueryBuilder().delete().from('inventory_movements')
+          .where('batch_id IN (:...ids)', { ids: batchIds }).execute();
+        await mgr.createQueryBuilder().delete().from('media_assets')
+          .where('batch_id IN (:...ids)', { ids: batchIds }).execute();
+        await mgr.delete(InventoryBatch, { product_id: id });
       }
+
+      // 删除关联的业务单据和资源
+      await mgr.createQueryBuilder().delete().from('sales_orders')
+        .where('product_id = :pid', { pid: id }).execute();
+      await mgr.createQueryBuilder().delete().from('purchase_orders')
+        .where('product_id = :pid', { pid: id }).execute();
+      await mgr.createQueryBuilder().delete().from('media_assets')
+        .where('product_id = :pid', { pid: id }).execute();
+
       await mgr.delete(ProductPrice, { product_id: id });
       await mgr.delete(Product, id);
+
+      await mgr.query('PRAGMA foreign_keys = ON');
       return { ok: true };
     });
   }
