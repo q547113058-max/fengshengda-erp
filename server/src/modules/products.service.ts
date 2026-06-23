@@ -1,6 +1,6 @@
 // ProductsService — 产品/价格业务逻辑
 // 抽离 controller，让 controller 纯做 HTTP 路由 + DTO 验证
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Product } from '../entities/product.entity';
@@ -63,17 +63,29 @@ export class ProductsService {
     return this.products.findOne({ where: { id } });
   }
 
-  /** 删除产品（事务：检查批次引用 + 级联删价格） */
+  /** 删除产品（事务：关闭 FK → 级联删全部关联 → 恢复 FK） */
   async remove(id: number) {
     return this.ds.transaction(async mgr => {
-      const batchCount = await mgr.count(InventoryBatch, { where: { product_id: id } });
-      if (batchCount > 0) {
-        throw new BadRequestException(
-          `该产品有 ${batchCount} 个库存批次，无法删除。请先清空库存。`,
-        );
+      const batches = await mgr.find(InventoryBatch, {
+        where: { product_id: id },
+        select: ['id'],
+      });
+      const batchIds = batches.map(b => b.id);
+
+      await mgr.query('PRAGMA foreign_keys = OFF');
+
+      if (batchIds.length > 0) {
+        await mgr.query(`DELETE FROM inventory_movements WHERE batch_id IN (${batchIds.join(',')})`);
+        await mgr.query(`DELETE FROM media_assets WHERE batch_id IN (${batchIds.join(',')})`);
       }
-      await mgr.delete(ProductPrice, { product_id: id });
-      await mgr.delete(Product, id);
+      await mgr.query(`DELETE FROM inventory_batches WHERE product_id = ${id}`);
+      await mgr.query(`DELETE FROM sales_orders WHERE product_id = ${id}`);
+      await mgr.query(`DELETE FROM purchase_orders WHERE product_id = ${id}`);
+      await mgr.query(`DELETE FROM media_assets WHERE product_id = ${id}`);
+      await mgr.query(`DELETE FROM product_prices WHERE product_id = ${id}`);
+      await mgr.query(`DELETE FROM products WHERE id = ${id}`);
+
+      await mgr.query('PRAGMA foreign_keys = ON');
       return { ok: true };
     });
   }
