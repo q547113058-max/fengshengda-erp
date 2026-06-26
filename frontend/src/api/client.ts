@@ -26,8 +26,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (token) headers['Authorization'] = `Bearer ${token}`;
   const res = await fetch(BASE + path, { ...init, headers });
   if (res.status === 401) {
-    // 401 未授权 → 清 localStorage，触发重新登录
+    // 401 未授权 → 清 token + 清 zustand store，彻底注销
     try { localStorage.removeItem('fsd-token'); } catch { /* ignore */ }
+    try { localStorage.removeItem('fsd-auth'); } catch { /* ignore */ }
+    // 动态 import 避免循环依赖，只在 401 时才加载 store
+    try { const { useAuth } = await import('@/store'); useAuth.getState().logout(); } catch { /* ignore */ }
   }
   if (!res.ok) {
     let body: any = null;

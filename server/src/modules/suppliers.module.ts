@@ -1,6 +1,6 @@
 import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, NotFoundException } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { Supplier } from '../entities/supplier.entity';
 import { CreateSupplierDto, UpdateSupplierDto } from '../dto/customer-supplier.dto';
@@ -8,10 +8,13 @@ import { CreateSupplierDto, UpdateSupplierDto } from '../dto/customer-supplier.d
 @ApiTags('供应商')
 @Controller('suppliers')
 class SuppliersController {
-  constructor(@InjectRepository(Supplier) private repo: Repository<Supplier>) {}
+  constructor(
+    @InjectRepository(Supplier) private repo: Repository<Supplier>,
+    private ds: DataSource,
+  ) {}
 
   @Get() @ApiOperation({ summary: '供应商列表' })
-  list() { return this.repo.find({ order: { id: 'ASC' } }); }
+  list() { return this.repo.find({ order: { id: 'DESC' } }); }
 
   @Get(':id') @ApiOperation({ summary: '供应商详情' })
   async one(@Param('id', ParseIntPipe) id: number) {
@@ -31,10 +34,25 @@ class SuppliersController {
     return this.repo.findOne({ where: { id } });
   }
 
-  @Delete(':id') @ApiOperation({ summary: '删除供应商' })
+  @Delete(':id') @ApiOperation({ summary: '删除供应商（采购单保留，解除关联）' })
   async remove(@Param('id', ParseIntPipe) id: number) {
-    await this.repo.delete(id);
-    return { ok: true };
+    const qr = this.ds.createQueryRunner();
+    await qr.connect();
+    const isSQLite = this.ds.options.type === 'better-sqlite3';
+    await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+    await qr.startTransaction();
+    try {
+      await qr.query(`UPDATE purchase_orders SET supplier_id = 0 WHERE supplier_id = ${id}`);
+      await qr.query(`DELETE FROM suppliers WHERE id = ${id}`);
+      await qr.commitTransaction();
+      return { ok: true };
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.query(isSQLite ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+      await qr.release();
+    }
   }
 }
 

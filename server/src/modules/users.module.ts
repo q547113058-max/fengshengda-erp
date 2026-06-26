@@ -1,4 +1,4 @@
-import { Module, Controller, Get, Post, Put, Body, Param, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, UseGuards, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
@@ -12,7 +12,7 @@ class UsersController {
   constructor(@InjectRepository(User) private repo: Repository<User>) {}
 
   @Get()
-  list() { return this.repo.find({ order: { id: 'ASC' } }); }
+  list() { return this.repo.find({ order: { id: 'DESC' } }); }
 
   @Post()
   async create(@Body() body: any, @GetUser() caller: any) {
@@ -75,6 +75,19 @@ class UsersController {
     }
     await this.repo.update(targetId, patch);
     return this.repo.findOneBy({ id: targetId });
+  }
+
+  @Delete(':id')
+  async remove(@Param('id', ParseIntPipe) id: number, @GetUser() caller: any) {
+    if (caller.role !== 'boss' && caller.role !== 'admin') throw new ForbiddenException('仅老板/管理员可删除用户');
+    // 不能删自己
+    if (caller.sub === id) throw new ForbiddenException('不能删除自己');
+    // admin 不能删老板
+    const target = await this.repo.findOneBy({ id });
+    if (!target) throw new BadRequestException('用户不存在');
+    if (caller.role === 'admin' && target.role === 'boss') throw new ForbiddenException('管理员不能删除老板');
+    await this.repo.delete(id);
+    return { ok: true };
   }
 }
 

@@ -18,7 +18,7 @@ export class ProductsService {
 
   /** 列表（带所有税票价） */
   async list() {
-    const products = await this.products.find({ order: { id: 'ASC' } });
+    const products = await this.products.find({ order: { id: 'DESC' } });
     const prices = await this.prices.find();
     return products.map(p => ({
       ...p,
@@ -82,9 +82,10 @@ export class ProductsService {
         await qr.query(`DELETE FROM media_assets WHERE batch_id IN (${batchIds.join(',')})`);
       }
       await qr.query(`DELETE FROM inventory_batches WHERE product_id = ${id}`);
-      await qr.query(`DELETE FROM sales_orders WHERE product_id = ${id}`);
-      await qr.query(`DELETE FROM purchase_orders WHERE product_id = ${id}`);
-      await qr.query(`DELETE FROM media_assets WHERE product_id = ${id}`);
+      // 业务单据保留，解除产品关联
+      await qr.query(`UPDATE sales_orders SET product_id = 0 WHERE product_id = ${id}`);
+      await qr.query(`UPDATE purchase_orders SET product_id = 0 WHERE product_id = ${id}`);
+      await qr.query(`UPDATE media_assets SET product_id = 0 WHERE product_id = ${id}`);
       await qr.query(`DELETE FROM product_prices WHERE product_id = ${id}`);
       await qr.query(`DELETE FROM products WHERE id = ${id}`);
 

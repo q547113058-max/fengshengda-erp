@@ -19,7 +19,7 @@ export class PurchaseService {
     private ds: DataSource,
   ) {}
 
-  list() { return this.repo.find({ order: { id: 'ASC' } }); }
+  list() { return this.repo.find({ order: { id: 'DESC' } }); }
 
   async one(id: number) {
     const o = await this.repo.findOne({ where: { id } });
@@ -105,17 +105,31 @@ export class PurchaseService {
   }
 
   async remove(id: number) {
-    return this.ds.transaction(async mgr => {
-      const txCount = await mgr.count(PaymentTransaction, {
+    const qr = this.ds.createQueryRunner();
+    await qr.connect();
+    const isSQLite = this.ds.options.type === 'better-sqlite3';
+    await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+    await qr.startTransaction();
+    try {
+      const txCount = await qr.manager.count(PaymentTransaction, {
         where: { source_type: 'purchase', ref_order_id: id },
       });
       if (txCount > 0) {
-        await mgr.update(PurchaseOrder, id, { settle_status: 'cancelled' as any });
+        await qr.manager.update(PurchaseOrder, id, { settle_status: 'cancelled' as any });
         return { ok: true, soft_deleted: true, reason: '有关联付款流水，已软删' };
       }
-      await mgr.delete(PurchaseOrder, id);
+      // 解除库存批次关联
+      await qr.query(`UPDATE inventory_batches SET purchase_order_id = 0 WHERE purchase_order_id = ${id}`);
+      await qr.query(`DELETE FROM purchase_orders WHERE id = ${id}`);
+      await qr.commitTransaction();
       return { ok: true };
-    });
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.query(isSQLite ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+      await qr.release();
+    }
   }
 
   async pay(id: number, body: PayPurchaseDto) {

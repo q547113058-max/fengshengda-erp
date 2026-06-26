@@ -14,9 +14,8 @@ export interface FieldDef {
   placeholder?: string;
   min?: number;
   step?: number;
-  span?: number;
-  initialValue?: any;
   disabled?: boolean;
+  initialValue?: any;
 }
 
 interface Props {
@@ -25,7 +24,7 @@ interface Props {
   fields: FieldDef[];
   initial?: Record<string, any>;
   onCancel: () => void;
-  onSubmit: (values: any) => Promise<void>;
+  onSubmit: (values: Record<string, any>) => Promise<void>;
 }
 
 export default function EditModal({ open, title, fields, initial = {}, onCancel, onSubmit }: Props) {
@@ -53,7 +52,6 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
     try {
       const v = await form.validateFields();
       setBusy(true);
-      // date 字段转 ISO
       fields.forEach(f => {
         if (f.type === 'date' && v[f.name]) v[f.name] = (v[f.name] as any).format('YYYY-MM-DD');
         if (f.type === 'upload') v[f.name] = fileUrl || '';
@@ -63,7 +61,7 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
       onCancel();
       setFileUrl('');
     } catch (e: any) {
-      if (e?.errorFields) return; // 验证失败
+      if (e?.errorFields) return;
       message.error(e?.message || '保存失败');
     } finally {
       setBusy(false);
@@ -78,12 +76,43 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
       onOk={submit}
       confirmLoading={busy}
       width={620}
-      destroyOnClose
+      destroyOnHidden
       okText="保存"
       cancelText="取消"
     >
       <Form form={form} layout="vertical" style={{ paddingTop: 12 }}>
-        {fields.map(f => (
+        {fields.map(f => f.type === 'upload' ? (
+          <Form.Item
+            key={f.name}
+            name={f.name}
+            label={f.label}
+            valuePropName="fileList"
+            getValueFromEvent={(e: any) => e?.fileList || []}
+            rules={f.required ? [{ required: true, message: `请上传${f.label}` }] : []}
+          >
+            <Upload
+              accept="image/*"
+              maxCount={1}
+              showUploadList={fileUrl ? { showPreviewIcon: false } : false}
+              beforeUpload={async (file) => {
+                setUploading(true);
+                try {
+                  const res = await api.uploadFile(file, { type: 'image' });
+                  setFileUrl(res.url || res.file_path || res.path || '');
+                  message.success('上传成功');
+                } catch (e: any) {
+                  message.error('上传失败: ' + (e.message || ''));
+                } finally {
+                  setUploading(false);
+                }
+                return false;
+              }}
+              onRemove={() => setFileUrl('')}
+            >
+              <Button icon={<UploadOutlined />} loading={uploading} size="small">选择图片</Button>
+            </Upload>
+          </Form.Item>
+        ) : (
           <Form.Item
             key={f.name}
             name={f.name}
@@ -97,29 +126,6 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
             {f.type === 'textarea' && <Input.TextArea rows={3} placeholder={f.placeholder} disabled={f.disabled} />}
             {f.type === 'password' && <Input.Password placeholder={f.placeholder} disabled={f.disabled} />}
             {f.type === 'date' && <DatePicker style={{ width: '100%' }} disabled={f.disabled} />}
-            {f.type === 'upload' && (
-              <Upload
-                accept="image/*"
-                maxCount={1}
-                showUploadList={fileUrl ? { showPreviewIcon: false } : false}
-                beforeUpload={async (file) => {
-                  setUploading(true);
-                  try {
-                    const res = await api.uploadFile(file, { type: 'image' });
-                    setFileUrl(res.url || res.file_path || res.path || '');
-                    message.success('上传成功');
-                  } catch (e: any) {
-                    message.error('上传失败: ' + (e.message || ''));
-                  } finally {
-                    setUploading(false);
-                  }
-                  return false; // 阻止 antd 自动上传
-                }}
-                onRemove={() => setFileUrl('')}
-              >
-                <Button icon={<UploadOutlined />} loading={uploading} size="small">选择图片</Button>
-              </Upload>
-            )}
             {!f.type && <Input placeholder={f.placeholder} disabled={f.disabled} />}
           </Form.Item>
         ))}

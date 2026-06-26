@@ -1,4 +1,4 @@
-import { Card, Table, Tag, Button, Tabs, App, Space } from 'antd';
+import { Card, Table, Tag, Button, Tabs, App, Space, Popconfirm } from 'antd';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { api } from '@/api/client';
@@ -45,13 +45,21 @@ export default function UserSettings() {
 
   useEffect(reload, []);
 
-  // 非 boss：自动打开自己资料弹窗，隐藏页面内容
+  const handleDelete = async (uid: number) => {
+    try {
+      await api.remove('users', uid);
+      message.success('用户已删除');
+      reload();
+    } catch (e: any) { message.error(e.message); }
+  };
+
+  // 非管理员：自动打开自己资料弹窗，隐藏页面内容
   useEffect(() => {
-    if (!isBoss && users.length > 0 && currentUser) {
+    if (!canManage && users.length > 0 && currentUser) {
       const me = users.find(u => u.id === currentUser.id);
       if (me) { setEditing(me); setModalOpen(true); }
     }
-  }, [isBoss, users, currentUser]);
+  }, [canManage, users, currentUser]);
 
   // ?editSelf=true 时自动打开当前用户编辑弹窗（仅 boss 有侧边菜单入口）
   useEffect(() => {
@@ -160,7 +168,7 @@ export default function UserSettings() {
           await api.update('users', editing.id, v);
           if (currentUser) {
             const { useAuth } = await import('@/store');
-            useAuth.setState({ user: { ...currentUser, ...v, password: undefined, new_password: undefined, old_password: undefined } });
+            useAuth.setState({ user: { ...currentUser, ...v, password: undefined, new_password: undefined, old_password: undefined } as any });
           }
           setModalOpen(false);
           setEditing(null);
@@ -191,14 +199,23 @@ export default function UserSettings() {
                     { title: '默认佣金', dataIndex: 'default_commission_rate', width: 100, align: 'right' as const, render: (v: number) => v ? `${v}%` : '—' },
                     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => <Tag color={v === 'active' ? 'success' : 'default'}>{v === 'active' ? '正常' : v}</Tag> },
                     {
-                      title: '操作', width: 110, align: 'right' as const,
+                      title: '操作', width: 180, align: 'right' as const,
                       render: (_: any, r: any) => {
-                        // admin 不能编辑老板
-                        if (isAdmin && r.role === 'boss') return <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>—</span>;
-                        return (
-                          <Button size="small" onClick={() => { setEditing(r); setModalOpen(true); }}>
-                            {currentUser?.id === r.id ? '我的资料' : '编辑'}
-                          </Button>
+                        // admin 不能修改老板
+                        const locked = isAdmin && r.role === 'boss';
+                        // 不能删自己
+                        const isSelfRow = currentUser?.id === r.id;
+                        return locked ? <span style={{ color: 'var(--ink-3)', fontSize: 12 }}>—</span> : (
+                          <Space size={4}>
+                            <Button size="small" onClick={() => { setEditing(r); setModalOpen(true); }}>
+                              {isSelfRow ? '我的资料' : '编辑'}
+                            </Button>
+                            {!isSelfRow && (
+                              <Popconfirm title={`确定删除用户 ${r.full_name || r.username}？`} onConfirm={() => handleDelete(r.id)}>
+                                <Button size="small" danger>删除</Button>
+                              </Popconfirm>
+                            )}
+                          </Space>
                         );
                       },
                     },
@@ -209,14 +226,14 @@ export default function UserSettings() {
                   title={isSelf ? '个人资料' : `编辑用户 · ${editing?.full_name || ''}`}
                   fields={fields}
                   initial={editing || {}}
-                  onCancel={() => { setModalOpen(false); setEditing(null); nav('/'); }}
+                  onCancel={() => { setModalOpen(false); setEditing(null); }}
                   onSubmit={async (v) => {
                     if (!v.new_password) delete v.new_password;
                     if (!v.old_password) delete v.old_password;
                     await api.update('users', editing.id, v);
                     if (isSelf && currentUser) {
                       const { useAuth } = await import('@/store');
-                      useAuth.setState({ user: { ...currentUser, ...v, password: undefined, new_password: undefined, old_password: undefined } });
+                      useAuth.setState({ user: { ...currentUser, ...v, password: undefined, new_password: undefined, old_password: undefined } as any });
                     }
                     reload();
                   }}

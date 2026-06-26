@@ -69,7 +69,7 @@ export class AuthController {
   @ApiOperation({ summary: '用户列表（限 boss）' })
   async list() {
     // 默认无 password_hash（select:false），安全
-    return this.users.find({ order: { id: 'ASC' } });
+    return this.users.find({ order: { id: 'DESC' } });
   }
 
   // 当前用户 — 任何登录用户可调

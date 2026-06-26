@@ -4,6 +4,7 @@ import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
 import { api } from '@/api/client';
+import { preloadPages } from '@/utils/preload';
 
 const ROLES: Array<{ username: string; label: string; desc: string }> = [
   { username: 'boss',    label: '老板',  desc: '全部数据 · 编辑管理' },
@@ -61,6 +62,9 @@ export default function Login() {
         setLoadingProducts(false);
       }
     })();
+
+    // 后台预加载其他页面模块（不阻塞登录页渲染）
+    preloadPages();
   }, []);
 
   const onSubmit = async () => {
@@ -183,20 +187,6 @@ export default function Login() {
               登录系统
             </Button>
           </Form>
-
-          <div className="divider">DEMO ACCOUNTS</div>
-          <div className="role-grid">
-            {ROLES.map(r => (
-              <div
-                key={r.username}
-                className={`role-tag ${username === r.username ? 'active' : ''}`}
-                onClick={() => { setUsername(r.username); setPassword('demo'); }}
-              >
-                <div className="role-name">{r.label}</div>
-                <div className="role-desc">{r.desc}</div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

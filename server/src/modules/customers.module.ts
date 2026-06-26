@@ -17,8 +17,8 @@ class CustomersController {
 
   @Get() @ApiOperation({ summary: '客户列表' })
   list(@GetUser() user: any) {
-    if (user.role === 'boss') {
-      return this.repo.find({ order: { id: 'ASC' } });
+    if (user.role === 'boss' || user.role === 'admin') {
+      return this.repo.find({ order: { id: 'DESC' } });
     }
     // sales 角色只看自己录入的、或共享给自己的客户
     return this.repo
@@ -87,10 +87,25 @@ class CustomersController {
     return this.repo.findOne({ where: { id } });
   }
 
-  @Delete(':id') @ApiOperation({ summary: '删除客户' })
+  @Delete(':id') @ApiOperation({ summary: '删除客户（销售单保留，解除关联）' })
   async remove(@Param('id', ParseIntPipe) id: number) {
-    await this.repo.delete(id);
-    return { ok: true };
+    const qr = this.dataSource.createQueryRunner();
+    await qr.connect();
+    const isSQLite = this.dataSource.options.type === 'better-sqlite3';
+    await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+    await qr.startTransaction();
+    try {
+      await qr.query(`UPDATE sales_orders SET customer_id = 0 WHERE customer_id = ${id}`);
+      await qr.query(`DELETE FROM customers WHERE id = ${id}`);
+      await qr.commitTransaction();
+      return { ok: true };
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.query(isSQLite ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+      await qr.release();
+    }
   }
 }
 

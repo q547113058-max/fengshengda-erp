@@ -21,7 +21,7 @@ export class SalesService {
     private ds: DataSource,
   ) {}
 
-  list() { return this.repo.find({ order: { id: 'ASC' } }); }
+  list() { return this.repo.find({ order: { id: 'DESC' } }); }
 
   async one(id: number) {
     const o = await this.repo.findOne({ where: { id } });

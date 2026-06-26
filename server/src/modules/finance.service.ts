@@ -17,7 +17,7 @@ export class FinanceService {
   ) {}
 
   // === 账户 ===
-  listAccounts() { return this.accountRepo.find({ order: { id: 'ASC' } }); }
+  listAccounts() { return this.accountRepo.find({ order: { id: 'DESC' } }); }
 
   async getAccount(id: number) {
     const a = await this.accountRepo.findOne({ where: { id } });
@@ -35,19 +35,34 @@ export class FinanceService {
   }
 
   async removeAccount(id: number) {
-    await this.accountRepo.delete(id);
-    return { ok: true };
+    const qr = this.ds.createQueryRunner();
+    await qr.connect();
+    const isSQLite = this.ds.options.type === 'better-sqlite3';
+    await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+    await qr.startTransaction();
+    try {
+      await qr.query(`UPDATE payment_transactions SET account_id = 0 WHERE account_id = ${id}`);
+      await qr.query(`DELETE FROM payment_accounts WHERE id = ${id}`);
+      await qr.commitTransaction();
+      return { ok: true };
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.query(isSQLite ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+      await qr.release();
+    }
   }
 
   // === 流水 ===
   listTx(direction?: string) {
     return direction
-      ? this.txRepo.find({ where: { direction: direction as any }, order: { id: 'ASC' } })
-      : this.txRepo.find({ order: { id: 'ASC' } });
+      ? this.txRepo.find({ where: { direction: direction as any }, order: { id: 'DESC' } })
+      : this.txRepo.find({ order: { id: 'DESC' } });
   }
 
-  listReceive() { return this.txRepo.find({ where: { direction: 'in' }, order: { id: 'ASC' } }); }
-  listPay() { return this.txRepo.find({ where: { direction: 'out' }, order: { id: 'ASC' } }); }
+  listReceive() { return this.txRepo.find({ where: { direction: 'in' }, order: { id: 'DESC' } }); }
+  listPay() { return this.txRepo.find({ where: { direction: 'out' }, order: { id: 'DESC' } }); }
 
   createTx(body: CreateTransactionDto) {
     return this.txRepo.save(this.txRepo.create(body as any));

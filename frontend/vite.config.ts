@@ -19,4 +19,15 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    include: [
+      'antd',
+      '@ant-design/icons',
+      'dayjs',
+      'react',
+      'react-dom',
+      'react-router-dom',
+      'zustand',
+    ],
+  },
 });

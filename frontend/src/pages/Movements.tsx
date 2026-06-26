@@ -98,19 +98,21 @@ export default function Movements() {
         initial={{ type: 'in', qty: 1 }}
         onCancel={() => setModalOpen(false)}
         onSubmit={async (v) => {
+          // 分离图片字段（DTO 不接受）
+          const { image, image_remark, ...movementData } = v;
           // 1. 创建出入库记录
-          await api.addMovement(v);
+          await api.addMovement(movementData);
           // 2. 如果有图片，上传并关联
-          if (v.image) {
+          if (image) {
             const batchId = v.batch_id;
             const productId = productIdOfBatch(batchId);
             // 入库/退货 → 同步到产品图片资料（设 product_id）
             const syncToProduct = (v.type === 'in' || v.type === 'return') && productId;
-            await api.uploadFile(v.image, {
+            await api.uploadFile(image, {
               product_id: syncToProduct ? productId : undefined,
               batch_id: batchId,
               type: 'image',
-              remark: v.image_remark || `${TYPE_LABEL[v.type]?.t || v.type}凭证`,
+              remark: image_remark || `${TYPE_LABEL[v.type]?.t || v.type}凭证`,
             });
           }
           message.success('已登记');

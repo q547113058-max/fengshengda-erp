@@ -19,8 +19,8 @@ class CommissionController {
 
   @Get()
   list(@Query('status') status?: string) {
-    return status ? this.repo.find({ where: { settle_status: status as any }, order: { id: 'ASC' } })
-                  : this.repo.find({ order: { id: 'ASC' } });
+    return status ? this.repo.find({ where: { settle_status: status as any }, order: { id: 'DESC' } })
+                  : this.repo.find({ order: { id: 'DESC' } });
   }
 
   // 结算：更新记录 + 自动从某账户扣减

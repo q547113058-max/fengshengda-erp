@@ -18,7 +18,7 @@ class InventoryController {
     private ds: DataSource,
   ) {}
 
-  @Get('inventory/batches') listBatches() { return this.batches.find({ order: { id: 'ASC' } }); }
+  @Get('inventory/batches') listBatches() { return this.batches.find({ order: { id: 'DESC' } }); }
 
   @Get('inventory/aggregated')
   @ApiOperation({ summary: '按产品聚合库存（SQL GROUP BY，不在 Node 端 N+1 过滤）' })
@@ -94,7 +94,7 @@ class InventoryController {
     const where: any = {};
     if (type) where.type = type;
     if (batchId) where.batch_id = +batchId;
-    return this.movements.find({ where, order: { id: 'ASC' } });
+    return this.movements.find({ where, order: { id: 'DESC' } });
   }
 }
 

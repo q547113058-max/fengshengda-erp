@@ -61,7 +61,7 @@ export class MediaController {
     const where: any = {};
     if (type) where.type = type;
     if (productId) where.product_id = +productId;
-    return this.repo.find({ where, order: { id: 'ASC' } });
+    return this.repo.find({ where, order: { id: 'DESC' } });
   }
 
   // 文件上传 — warehouse 或 boss 才允许
