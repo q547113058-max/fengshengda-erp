@@ -1,5 +1,5 @@
 import { Card, Table, Tag, Space, Button, Segmented, App, Modal, Form, Select, InputNumber } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { api } from '@/api/client';
 
 const STATUS: Record<string, { label: string; color: string }> = {
@@ -12,6 +12,8 @@ export default function Commission() {
   const [list, setList] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [accounts, setAccounts] = useState<any[]>([]);
+  const [salesOrders, setSalesOrders] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [status, setStatus] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState<any>(null);
@@ -19,11 +21,28 @@ export default function Commission() {
 
   const reload = () => {
     setLoading(true);
-    Promise.all([api.commissions(status || undefined), api.users(), api.accounts()])
-      .then(([c, u, a]) => { setList(c); setUsers(u); setAccounts(a); })
+    Promise.all([
+      api.commissions(status || undefined),
+      api.users(),
+      api.accounts(),
+      api.salesOrders(),
+      api.products(),
+    ])
+      .then(([c, u, a, so, p]) => { setList(c); setUsers(u); setAccounts(a); setSalesOrders(so); setProducts(p); })
       .finally(() => setLoading(false));
   };
   useEffect(reload, [status]);
+
+  // 构建 commission source 查找：比较佣金记录 rate 与产品 commission_rate
+  const sourceMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    for (const so of salesOrders) {
+      const prod = products.find(p => p.id === so.product_id);
+      // 产品 commission_rate 存在且等于该销售单的 commission_rate → 产品佣金
+      map[so.id] = (prod?.commission_rate != null && prod.commission_rate === so.commission_rate) ? '产品' : '个人';
+    }
+    return map;
+  }, [salesOrders, products]);
 
   const uname = (id: number) => users.find(x => x.id === id)?.full_name || `#${id}`;
   const totalAmt = list.reduce((a, b) => a + b.amount, 0);
@@ -70,8 +89,19 @@ export default function Commission() {
         pagination={{ pageSize: 20 }}
         columns={[
           { title: '业务员', dataIndex: 'sales_user_id', width: 110, render: uname },
-          { title: '关联销售单', dataIndex: 'sales_order_id', render: (id: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>SO#{id}</span> },
-          { title: '佣金比例', dataIndex: 'rate', width: 110, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v}%</span> },
+          { title: '关联销售单', dataIndex: 'sales_order_id', width: 110, render: (id: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>SO#{id}</span> },
+          {
+            title: '佣金比例', width: 120, align: 'right' as const,
+            render: (_: any, r: any) => {
+              const src = sourceMap[r.sales_order_id] || '个人';
+              return (
+                <span>
+                  <span style={{ fontFamily: 'var(--font-mono)' }}>{r.rate}%</span>
+                  <Tag color={src === '产品' ? 'blue' : 'gold'} style={{ fontSize: 9, marginLeft: 4, lineHeight: '14px', padding: '0 3px' }}>{src}</Tag>
+                </span>
+              );
+            },
+          },
           { title: '佣金金额', dataIndex: 'amount', width: 130, align: 'right' as const, render: (v: number) => <span className="text-copper" style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>¥ {v.toFixed(2)}</span> },
           { title: '状态', dataIndex: 'settle_status', width: 100, render: (v: string) => <Tag color={STATUS[v]?.color}>{STATUS[v]?.label || v}</Tag> },
           { title: '结算时间', dataIndex: 'settled_at', width: 160, render: (v: string) => v ? new Date(v).toLocaleString() : '—' },

@@ -22,6 +22,48 @@ class DashboardController {
     @InjectRepository(Customer) private customers: Repository<Customer>,
   ) {}
 
+  @Get('trends')
+  async trends() {
+    const [sales, purchases, txs] = await Promise.all([
+      this.so.find({ where: { status: 'active' } as any }),
+      this.po.find(),
+      this.tx.find(),
+    ]);
+
+    // 近6个月
+    const months: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+
+    const sumByMonth = <T extends Record<string, any>>(
+      rows: T[], dateKey: string, amountFn: (r: T) => number,
+    ) => months.map(m => ({
+      month: m,
+      amount: rows
+        .filter(r => {
+          const d = r[dateKey];
+          if (!d) return false;
+          const s = String(d).slice(0, 7); // 'YYYY-MM-DD' or Date → 'YYYY-MM'
+          return s === m;
+        })
+        .reduce((a, r) => a + amountFn(r), 0),
+    }));
+
+    const saleTrend = sumByMonth(sales, 'sale_date', (r: any) => r.qty * r.sale_price);
+    const purchaseTrend = sumByMonth(purchases, 'purchase_date', (r: any) => r.qty * r.cost_price);
+    const incomeTrend = sumByMonth(
+      txs.filter(t => t.direction === 'in'), 'created_at', (r: any) => r.amount,
+    );
+    const expenseTrend = sumByMonth(
+      txs.filter(t => t.direction === 'out'), 'created_at', (r: any) => r.amount,
+    );
+
+    return { months, saleTrend, purchaseTrend, incomeTrend, expenseTrend };
+  }
+
   @Get('kpi')
   async kpi() {
     const [products, po, so, batches, accounts, tx, customers] = await Promise.all([

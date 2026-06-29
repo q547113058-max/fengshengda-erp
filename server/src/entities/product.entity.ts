@@ -34,6 +34,9 @@ export class Product {
   @Column({ type: 'text', nullable: true })
   remark: string;
 
+  @Column({ name: 'commission_rate', type: 'real', nullable: true })
+  commission_rate: number;
+
   @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 

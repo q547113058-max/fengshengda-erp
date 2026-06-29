@@ -44,6 +44,9 @@ export class CreateProductDto {
   @ApiPropertyOptional({ example: '袋装卤味，线下主力' })
   @IsOptional() @IsString() remark?: string;
 
+  @ApiPropertyOptional({ example: 3, description: '产品默认佣金比例 %' })
+  @IsOptional() @IsNumber() @Min(0) commission_rate?: number;
+
   @ApiPropertyOptional({ type: [ProductPriceDto] })
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProductPriceDto)
   prices?: ProductPriceDto[];
@@ -58,6 +61,7 @@ export class UpdateProductDto {
   @IsOptional() @IsNumber() @Min(0.01) qty_per_unit?: number;
   @IsOptional() @IsString() goods_location?: string;
   @IsOptional() @IsString() remark?: string;
+  @IsOptional() @IsNumber() @Min(0) commission_rate?: number;
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProductPriceDto)
   prices?: ProductPriceDto[];
 }

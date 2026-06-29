@@ -111,15 +111,11 @@ export class PurchaseService {
     await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
     await qr.startTransaction();
     try {
-      const txCount = await qr.manager.count(PaymentTransaction, {
-        where: { source_type: 'purchase', ref_order_id: id },
-      });
-      if (txCount > 0) {
-        await qr.manager.update(PurchaseOrder, id, { settle_status: 'cancelled' as any });
-        return { ok: true, soft_deleted: true, reason: '有关联付款流水，已软删' };
-      }
-      // 解除库存批次关联
+      // 1. 删除关联付款流水
+      await qr.query(`DELETE FROM payment_transactions WHERE source_type = 'purchase' AND ref_order_id = ${id}`);
+      // 2. 解除库存批次关联
       await qr.query(`UPDATE inventory_batches SET purchase_order_id = 0 WHERE purchase_order_id = ${id}`);
+      // 3. 删除采购单
       await qr.query(`DELETE FROM purchase_orders WHERE id = ${id}`);
       await qr.commitTransaction();
       return { ok: true };

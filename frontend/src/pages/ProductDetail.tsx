@@ -80,7 +80,8 @@ export default function ProductDetail() {
                 <Descriptions.Item label="规格">{product.spec}</Descriptions.Item>
                 <Descriptions.Item label="等级"><Tag color="processing">{product.grade}</Tag></Descriptions.Item>
                 <Descriptions.Item label="货地">{product.goods_location}</Descriptions.Item>
-                <Descriptions.Item label="库存(吨)">{product.qty_per_unit} 吨</Descriptions.Item>
+                <Descriptions.Item label="库存(吨)">{totalStock} 吨</Descriptions.Item>
+                <Descriptions.Item label="佣金">{product.commission_rate != null ? `${product.commission_rate}%` : '—'}</Descriptions.Item>
                 <Descriptions.Item label="备注" span={2}>{product.remark || '—'}</Descriptions.Item>
               </Descriptions>
             ),

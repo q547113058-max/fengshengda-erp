@@ -54,6 +54,7 @@ class UsersController {
       if (body.role === 'boss' || body.role === 'admin') throw new ForbiddenException('管理员不能设置老板/管理员角色');
     }
     const patch: any = {};
+    if (body.username !== undefined) patch.username = body.username;
     if (body.full_name !== undefined) patch.full_name = body.full_name;
     if (body.phone !== undefined) patch.phone = body.phone;
     if (body.default_commission_rate !== undefined) patch.default_commission_rate = body.default_commission_rate;
@@ -86,7 +87,30 @@ class UsersController {
     const target = await this.repo.findOneBy({ id });
     if (!target) throw new BadRequestException('用户不存在');
     if (caller.role === 'admin' && target.role === 'boss') throw new ForbiddenException('管理员不能删除老板');
-    await this.repo.delete(id);
+
+    const qr = this.repo.manager.connection.createQueryRunner();
+    await qr.connect();
+    const isSQLite = this.repo.manager.connection.options.type === 'better-sqlite3';
+    await qr.query(isSQLite ? 'PRAGMA foreign_keys = OFF' : 'SET FOREIGN_KEY_CHECKS = 0');
+    await qr.startTransaction();
+    try {
+      // 解除关联业务数据的 FK 引用（NULL 或 0）
+      await qr.query('UPDATE payment_transactions SET operator_id = NULL WHERE operator_id = ?', [id]);
+      await qr.query('UPDATE sales_orders SET sales_user_id = 0 WHERE sales_user_id = ?', [id]);
+      await qr.query('UPDATE customers SET sales_user_id = 0 WHERE sales_user_id = ?', [id]);
+      await qr.query('UPDATE commission_records SET sales_user_id = 0 WHERE sales_user_id = ?', [id]);
+      await qr.query('UPDATE purchase_orders SET created_by = 0 WHERE created_by = ?', [id]);
+      await qr.query('UPDATE media_assets SET uploader_id = NULL WHERE uploader_id = ?', [id]);
+
+      await qr.manager.delete(User, id);
+      await qr.commitTransaction();
+    } catch (err) {
+      await qr.rollbackTransaction();
+      throw err;
+    } finally {
+      await qr.query(isSQLite ? 'PRAGMA foreign_keys = ON' : 'SET FOREIGN_KEY_CHECKS = 1');
+      await qr.release();
+    }
     return { ok: true };
   }
 }

@@ -136,14 +136,20 @@ export class SettleCommissionDto {
 }
 
 export class CreateMovementDto {
-  @ApiProperty({ example: 1, description: '批次 ID' })
-  @IsInt() @Min(1) batch_id: number;
+  @ApiPropertyOptional({ example: 1, description: '批次 ID（入库时如不选批次，传 -1 则自动建）' })
+  @IsOptional() @IsInt() @Min(-1) batch_id?: number;
+
+  @ApiPropertyOptional({ example: 1, description: '产品 ID（入库建新批次时必填）' })
+  @IsOptional() @IsInt() @Min(1) product_id?: number;
+
+  @ApiPropertyOptional({ example: '佛山冷库A' })
+  @IsOptional() @IsString() warehouse?: string;
 
   @ApiProperty({ enum: ['in', 'out', 'transfer', 'loss', 'return'] })
   @IsIn(['in', 'out', 'transfer', 'loss', 'return'])
   type: 'in' | 'out' | 'transfer' | 'loss' | 'return';
 
-  @ApiProperty({ example: 10, description: '数量（箱）' })
+  @ApiProperty({ example: 10, description: '数量（吨）' })
   @IsInt() @Min(1) qty: number;
 
   @ApiPropertyOptional() @IsOptional() @IsString() operator?: string;

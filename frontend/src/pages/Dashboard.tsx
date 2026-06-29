@@ -1,24 +1,41 @@
-import { Row, Col, Card, Table, Tag, Progress } from 'antd';
+import { Row, Col, Card, Table, Tag } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
 import { api } from '@/api/client';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
+} from 'recharts';
 
 const ROLE_LABEL: Record<string, string> = { boss: '老板', finance: '财务', warehouse: '仓储', sales: '销售' };
+
+const MONTH_LABELS: Record<string, string> = {
+  '01': '1月', '02': '2月', '03': '3月', '04': '4月', '05': '5月', '06': '6月',
+  '07': '7月', '08': '8月', '09': '9月', '10': '10月', '11': '11月', '12': '12月',
+};
+
+function fmtMonth(yyyymm: string) {
+  const m = yyyymm.slice(5);
+  return MONTH_LABELS[m] || yyyymm;
+}
 
 export default function Dashboard() {
   const nav = useNavigate();
   const user = useAuth(s => s.user)!;
   const [kpi, setKpi] = useState<any>(null);
+  const [trends, setTrends] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    api.dashboardKpi()
-      .then(setKpi)
+    Promise.all([api.dashboardKpi(), api.dashboardTrends()])
+      .then(([kpiData, trendData]) => {
+        setKpi(kpiData);
+        setTrends(trendData);
+      })
       .catch(async (e: any) => {
         console.error(e);
-        // 401 = token 失效 → 清 store + token + 跳登录
         if (e?.status === 401) {
           useAuth.getState().logout();
           nav('/login', { replace: true });
@@ -33,6 +50,17 @@ export default function Dashboard() {
 
   const totalCust = Object.values(kpi.byType as Record<string, number>).reduce((a, b) => a + b, 0);
   const typeEntries = Object.entries(kpi.byType as Record<string, number>);
+
+  // 组装图表数据
+  const trendData = trends
+    ? trends.months.map((m: string, i: number) => ({
+        month: fmtMonth(m),
+        sale: trends.saleTrend[i]?.amount || 0,
+        purchase: trends.purchaseTrend[i]?.amount || 0,
+        income: trends.incomeTrend[i]?.amount || 0,
+        expense: trends.expenseTrend[i]?.amount || 0,
+      }))
+    : [];
 
   return (
     <>
@@ -79,8 +107,48 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* 趋势图表 */}
+      <Row gutter={24} style={{ marginTop: 24 }}>
+        <Col span={12}>
+          <Card
+            title="销售 vs 采购趋势"
+            extra={<span className="text-ink-3" style={{ fontSize: 11, letterSpacing: '0.1em' }}>近6个月</span>}
+          >
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v} />
+                <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+                <Legend />
+                <Line type="monotone" dataKey="sale" name="销售" stroke="#2c5282" strokeWidth={2} dot={{ r: 4 }} />
+                <Line type="monotone" dataKey="purchase" name="采购" stroke="#a3b18a" strokeWidth={2} dot={{ r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card
+            title="收支流水趋势"
+            extra={<span className="text-ink-3" style={{ fontSize: 11, letterSpacing: '0.1em' }}>近6个月</span>}
+          >
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={trendData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v} />
+                <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+                <Legend />
+                <Bar dataKey="income" name="收入" fill="#2c5282" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" name="支出" fill="#c0392b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+      </Row>
+
       {/* 下半：低库存预警 + 客户渠道结构 */}
-      <div className="dashboard-bottom">
+      <div className="dashboard-bottom" style={{ marginTop: 24 }}>
         <Card
           title="仓储预警 · 低库存 Top 5"
           extra={<span className="text-ink-3" style={{ fontSize: 11, letterSpacing: '0.1em' }}>LOW STOCK</span>}

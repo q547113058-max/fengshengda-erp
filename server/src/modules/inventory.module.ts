@@ -61,10 +61,30 @@ class InventoryController {
 
   // 手工出入库
   @Post('inventory/movement')
-  @ApiOperation({ summary: '登记出入库（自动扣减/增加批次剩余）' })
+  @ApiOperation({ summary: '登记出入库（入库可选自动建批次）' })
   async addMovement(@Body() body: CreateMovementDto) {
     return this.ds.transaction(async mgr => {
-      const batch = await mgr.findOne(InventoryBatch, { where: { id: body.batch_id } });
+      let batchId = body.batch_id;
+      // 入库/退货且选了「新建批次」：自动创建批次
+      if ((body.type === 'in' || body.type === 'return') && batchId === -1 && body.product_id) {
+        const product = await mgr.findOne(Product, { where: { id: body.product_id } });
+        if (!product) throw new NotFoundException('产品不存在');
+        const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const count = await mgr.count(InventoryBatch);
+        const batchNo = `B${today}-${String(count + 1).padStart(3, '0')}`;
+        const newBatch = await mgr.save(mgr.create(InventoryBatch, {
+          batch_no: batchNo,
+          product_id: body.product_id,
+          qty_total: 0,
+          qty_remaining: 0,
+          warehouse: body.warehouse || '佛山冷库A',
+          holder: body.operator || '黄仓管',
+          status: 'in_stock',
+        }));
+        batchId = newBatch.id;
+      }
+      if (!batchId) throw new BadRequestException('请选择批次或指定产品入库');
+      const batch = await mgr.findOne(InventoryBatch, { where: { id: batchId } });
       if (!batch) throw new NotFoundException('批次不存在');
       // 校验数量（DTO 已校验 qty>0）
       if ((body.type === 'out' || body.type === 'loss') && batch.qty_remaining < body.qty) {
@@ -76,7 +96,12 @@ class InventoryController {
       if (newRem === 0) newStatus = 'sold_out';
       else if (body.type === 'transfer') newStatus = 'transferred';
       else newStatus = 'in_stock';
-      await mgr.update(InventoryBatch, batch.id, { qty_remaining: newRem, status: newStatus });
+      const updateData: any = { qty_remaining: newRem, status: newStatus };
+      // 入库/退货时同步增加总量
+      if (body.type === 'in' || body.type === 'return') {
+        updateData.qty_total = batch.qty_total + body.qty;
+      }
+      await mgr.update(InventoryBatch, batch.id, updateData);
       return mgr.save(mgr.create(InventoryMovement, {
         batch_id: batch.id,
         type: body.type,

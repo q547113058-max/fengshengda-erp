@@ -1,6 +1,7 @@
 import { Card, Table, Tag, Row, Col } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { api } from '@/api/client';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const TYPE_LABEL: Record<string, { c: string; t: string }> = {
   public:     { c: 'gold',   t: '公账' },
@@ -14,7 +15,11 @@ const SOURCE_LABEL: Record<string, { c: string; t: string }> = {
   commission: { c: 'gold',   t: '佣金' },
   purchase:   { c: 'volcano',t: '采购' },
   manual:     { c: 'blue',   t: '手工' },
+  sale_reverse: { c: 'default', t: '销售反冲' },
+  purchase_reverse: { c: 'default', t: '采购反冲' },
 };
+
+const CHART_COLORS = ['#2c5282', '#a3b18a', '#c0392b', '#d4a373', '#6b8e23'];
 
 export default function AccountLedger() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -27,7 +32,6 @@ export default function AccountLedger() {
       .finally(() => setLoading(false));
   }, []);
 
-  // 预计算每条流水 + 账户名（避免 render 闭包）
   const txWithAccount = tx.map(t => {
     const a = accounts.find(x => x.id === t.account_id);
     const ins = tx.filter(x => x.account_id === t.account_id && x.direction === 'in').reduce((s, x) => s + x.amount, 0);
@@ -35,8 +39,70 @@ export default function AccountLedger() {
     return { ...t, accountName: a?.name || '—', balance: (a?.opening_balance || 0) + ins - outs };
   });
 
+  // 按来源类型（仅正向）
+  const bySource = useMemo(() => {
+    const map: Record<string, number> = {};
+    tx.filter(t => !t.source_type?.endsWith('_reverse')).forEach(t => {
+      const label = SOURCE_LABEL[t.source_type]?.t || t.source_type || '其他';
+      map[label] = (map[label] || 0) + t.amount;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [tx]);
+
+  // 月度收支
+  const monthlyFlow = useMemo(() => {
+    const months: string[] = [];
+    const now = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    }
+    const labels = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+    return months.map(m => {
+      const inSum = tx.filter(t => t.direction === 'in' && String(t.created_at).slice(0, 7) === m).reduce((s, t) => s + t.amount, 0);
+      const outSum = tx.filter(t => t.direction === 'out' && String(t.created_at).slice(0, 7) === m).reduce((s, t) => s + t.amount, 0);
+      const monthNum = parseInt(m.slice(5), 10);
+      return { month: labels[monthNum - 1] || m, income: inSum, expense: outSum };
+    });
+  }, [tx]);
+
   return (
     <>
+      {/* 收支对比 + 来源分布 */}
+      <Row gutter={24} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <Card size="small" title="月度收支对比">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={monthlyFlow}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                <YAxis tick={{ fontSize: 12 }} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v} />
+                <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+                <Legend />
+                <Bar dataKey="income" name="收入" fill="#2c5282" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" name="支出" fill="#c0392b" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card size="small" title="流水来源分布">
+            {bySource.length === 0 ? (
+              <div className="text-ink-3" style={{ textAlign: 'center', padding: 40 }}>暂无数据</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={bySource} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
+                    {bySource.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </Col>
+      </Row>
+
       <div className="section-head">
         <div className="title">支付账户</div>
         <div className="eyebrow">BALANCE</div>

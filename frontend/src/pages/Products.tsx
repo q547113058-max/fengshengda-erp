@@ -45,6 +45,7 @@ export default function Products() {
     { name: 'goods_location', label: '货地', placeholder: '如：佛山冷库A' },
     { name: 'price',        label: '单价(元/吨)', type: 'number', min: 0, step: 0.01, placeholder: '如：18.80' },
     { name: 'price_remark', label: '价格备注', placeholder: '如：1%农副价、散客价' },
+    { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1, placeholder: '如：3，留空则用业务员自有佣金' },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const editFields: FieldDef[] = [
@@ -55,6 +56,7 @@ export default function Products() {
     { name: 'grade',        label: '等级', type: 'select', options: [{ value: 'A级', label: 'A级' }, { value: 'B级', label: 'B级' }, { value: '精品', label: '精品' }] },
     { name: 'qty_per_unit', label: '库存(吨)', type: 'number', min: 0, step: 1 },
     { name: 'goods_location', label: '货地' },
+    { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1 },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const fields = editing ? editFields : newFields;
@@ -121,7 +123,8 @@ export default function Products() {
               );
             },
           },
-          { title: '库存(吨)', dataIndex: 'qty_per_unit', width: 100, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v} 吨</span> },
+          { title: '库存(吨)', dataIndex: 'stock_remaining', width: 100, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>{v ?? 0} 吨</span> },
+          { title: '佣金', dataIndex: 'commission_rate', width: 80, align: 'right' as const, render: (v: number) => v != null ? <Tag color="blue">{v}%</Tag> : <span className="text-ink-3">—</span> },
           {
             title: '操作', width: 140, align: 'right' as const, fixed: 'right' as const,
             render: (_: any, r: any) => !canEdit ? null : (

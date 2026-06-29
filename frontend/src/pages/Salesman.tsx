@@ -47,7 +47,7 @@ export default function Salesman() {
                 <Avatar size={32} style={{ background: 'var(--ink)' }}>{(r.user?.full_name ?? r.user?.username ?? '?')[0]}</Avatar>
                 <div>
                   <div style={{ fontWeight: 500 }}>{r.user?.full_name || r.user?.username || '-'}</div>
-                  <div className="text-ink-3" style={{ fontSize: 11 }}>默认佣金 {r.user.default_commission_rate}%</div>
+                  <div className="text-ink-3" style={{ fontSize: 11 }}>佣金 {r.user.default_commission_rate}%</div>
                 </div>
               </Space>
             ),

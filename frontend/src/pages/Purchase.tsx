@@ -4,6 +4,7 @@ import { useAuth } from '@/store';
 import { canEdit as canEditPerm } from '@/utils/permissions';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const STATUS: Record<string, { label: string; color: string }> = {
   done:    { label: '已结清', color: 'success' },
@@ -14,7 +15,7 @@ const STATUS: Record<string, { label: string; color: string }> = {
 export default function Purchase() {
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
-  const canEdit = canEditPerm(user.role, 'purchase'); // 从权限矩阵读取
+  const canEdit = canEditPerm(user.role, 'purchase');
   const [orders, setOrders] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -43,6 +44,18 @@ export default function Purchase() {
   const supplierName = (id: number) => suppliers.find(x => x.id === id)?.name || `#${id}`;
   const remove = async (id: number) => { try { await api.remove('purchase', id); message.success('已删除'); reload(); } catch (e: any) { message.error(e.message); } };
 
+  // 图表数据：按供应商采购额
+  const bySupplier = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(o => {
+      const key = supplierName(o.supplier_id);
+      map[key] = (map[key] || 0) + o.qty * o.cost_price;
+    });
+    return Object.entries(map)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [filtered, suppliers]);
+
   const fields: FieldDef[] = [
     { name: 'supplier_id', label: '供应商', type: 'select', required: true, options: suppliers.map(s => ({ value: s.id, label: s.name })) },
     { name: 'product_id',  label: '产品',   type: 'select', required: true, options: products.map(p => ({ value: p.id, label: `${p.category} · ${p.factory_code}` })) },
@@ -55,7 +68,6 @@ export default function Purchase() {
     { name: 'remark',      label: '备注',       type: 'textarea' },
   ];
 
-  // 付款弹窗
   const openPay = (o: any) => {
     setPaying(o);
     const total = o.qty * o.cost_price;
@@ -90,6 +102,21 @@ export default function Purchase() {
         </Space>
       }
     >
+      {/* 采购图表 */}
+      {bySupplier.length > 0 && (
+        <Card size="small" title="按供应商采购额" style={{ marginBottom: 16 }}>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={bySupplier} layout="vertical" margin={{ left: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
+              <XAxis type="number" tick={{ fontSize: 12 }} tickFormatter={v => v >= 10000 ? `${(v / 10000).toFixed(1)}万` : v} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={80} />
+              <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+              <Bar dataKey="value" fill="#a3b18a" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
       <Table
         size="small"
         loading={loading}

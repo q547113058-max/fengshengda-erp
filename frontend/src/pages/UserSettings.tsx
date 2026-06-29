@@ -75,6 +75,7 @@ export default function UserSettings() {
 
   // 个人资料字段（自己改）
   const selfFields: FieldDef[] = [
+    { name: 'username', label: '工号', required: true },
     { name: 'full_name', label: '姓名', required: true },
     { name: 'phone', label: '电话' },
     { name: 'old_password', label: '旧密码（改密时填）', type: 'password', placeholder: '不改密请留空' },
@@ -83,6 +84,7 @@ export default function UserSettings() {
 
   // boss/admin 管理字段（改别人）
   const bossAdminFields: FieldDef[] = [
+    { name: 'username', label: '工号', required: true },
     { name: 'full_name', label: '姓名', required: true },
     { name: 'phone', label: '电话' },
     { name: 'role', label: '角色', type: 'select', options: [
@@ -90,7 +92,7 @@ export default function UserSettings() {
       { value: 'finance', label: '财务' },
       { value: 'warehouse', label: '仓储' }, { value: 'sales', label: '销售' },
     ]},
-    { name: 'default_commission_rate', label: '默认佣金(%)', type: 'number', min: 0, step: 0.5 },
+    { name: 'default_commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.5 },
     { name: 'status', label: '状态', type: 'select', options: [
       { value: 'active', label: '正常' }, { value: 'disabled', label: '停用' },
     ]},
@@ -150,7 +152,7 @@ export default function UserSettings() {
       { value: 'sales', label: '销售' },
     ]},
     { name: 'phone', label: '电话' },
-    { name: 'default_commission_rate', label: '默认佣金(%)', type: 'number', min: 0, step: 0.5 },
+    { name: 'default_commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.5 },
   ];
 
   if (!canManage) {
@@ -196,7 +198,7 @@ export default function UserSettings() {
                     { title: '姓名', dataIndex: 'full_name', render: (v: string) => <span style={{ fontWeight: 500 }}>{v}</span> },
                     { title: '角色', dataIndex: 'role', width: 100, render: (v: string) => <Tag color={ROLE_COLOR[v]}>{ROLE_LABEL[v]}</Tag> },
                     { title: '电话', dataIndex: 'phone', width: 140, render: (s: string) => <span style={{ fontFamily: 'var(--font-mono)' }}>{s || '—'}</span> },
-                    { title: '默认佣金', dataIndex: 'default_commission_rate', width: 100, align: 'right' as const, render: (v: number) => v ? `${v}%` : '—' },
+                    { title: '佣金', dataIndex: 'default_commission_rate', width: 100, align: 'right' as const, render: (v: number) => v ? `${v}%` : '—' },
                     { title: '状态', dataIndex: 'status', width: 90, render: (v: string) => <Tag color={v === 'active' ? 'success' : 'default'}>{v === 'active' ? '正常' : v}</Tag> },
                     {
                       title: '操作', width: 180, align: 'right' as const,

@@ -10,6 +10,7 @@ import { CommissionRecord } from '../entities/commission-record.entity';
 import { PaymentTransaction } from '../entities/payment-transaction.entity';
 import { Customer } from '../entities/customer.entity';
 import { User } from '../entities/user.entity';
+import { Product } from '../entities/product.entity';
 import { CreateSalesDto, UpdateSalesDto, ReceiveSaleDto } from '../dto/purchase-sales.dto';
 import { calcSettleStatus, genOrderNo } from '../common/business.utils';
 
@@ -43,11 +44,23 @@ export class SalesService {
         );
       }
 
+      // 产品佣金优先 → 业务员默认佣金 → 传入佣金 → 0
+      const product = await mgr.findOne(Product, { where: { id: body.product_id } });
+      const salesUser = await mgr.findOne(User, { where: { id: body.sales_user_id } });
+      let effectiveCommissionRate: number;
+      if (product?.commission_rate != null) {
+        effectiveCommissionRate = product.commission_rate;
+      } else if (salesUser?.default_commission_rate != null && salesUser.default_commission_rate > 0) {
+        effectiveCommissionRate = salesUser.default_commission_rate;
+      } else {
+        effectiveCommissionRate = body.commission_rate || 0;
+      }
+
       const date = body.sale_date || new Date().toISOString().slice(0, 10);
       const so_no = await genOrderNo(mgr, 'SO', date);
 
       const total = body.qty * body.sale_price;
-      const commissionAmt = total * ((body.commission_rate || 0) / 100);
+      const commissionAmt = total * (effectiveCommissionRate / 100);
 
       const order = await mgr.save(mgr.create(SalesOrder, {
         so_no,
@@ -58,7 +71,7 @@ export class SalesService {
         qty: body.qty,
         sale_price: body.sale_price,
         tax_rate: body.tax_rate || 1,
-        commission_rate: body.commission_rate || 0,
+        commission_rate: effectiveCommissionRate,
         commission_amt: commissionAmt,
         receive_status: calcSettleStatus(body.received_amount || 0, total),
         received_amount: body.received_amount || 0,
@@ -76,7 +89,6 @@ export class SalesService {
       });
 
       // 出库流水
-      const salesUser = await mgr.findOne(User, { where: { id: body.sales_user_id } });
       const customer = await mgr.findOne(Customer, { where: { id: body.customer_id } });
       await mgr.save(mgr.create(InventoryMovement, {
         batch_id: batch.id,
@@ -93,7 +105,7 @@ export class SalesService {
         await mgr.save(mgr.create(CommissionRecord, {
           sales_order_id: order.id,
           sales_user_id: body.sales_user_id,
-          rate: body.commission_rate || 0,
+          rate: effectiveCommissionRate,
           amount: commissionAmt,
           settle_status: 'pending',
         }));

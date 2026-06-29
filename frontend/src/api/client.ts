@@ -69,6 +69,7 @@ export const api = {
   transactions:    (direction?: 'in' | 'out') =>
                      request<any[]>(direction ? `/finance/transactions?direction=${direction}` : '/finance/transactions'),
   dashboardKpi:    () => request<any>('/dashboard/kpi'),
+  dashboardTrends: () => request<any>('/dashboard/trends'),
   users:           () => request<any[]>('/users'),
 
   // 业务动作

@@ -1,7 +1,8 @@
 import { Card, Table, Progress, Space, Tag } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '@/api/client';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Inventory() {
   const nav = useNavigate();
@@ -15,8 +16,35 @@ export default function Inventory() {
       .finally(() => setLoading(false));
   }, []);
 
+  // 库存水位图数据
+  const stockChart = useMemo(() => {
+    return rows
+      .map(r => ({
+        name: `${r.product.category} · ${r.product.factory_code}`,
+        remaining: r.qtyRem,
+        sold: r.sold,
+      }))
+      .sort((a, b) => b.remaining - a.remaining);
+  }, [rows]);
+
   return (
     <Space direction="vertical" size={24} style={{ width: '100%' }}>
+      {/* 库存水位图 */}
+      {stockChart.length > 0 && (
+        <Card title="库存水位（吨）" extra={<span className="text-ink-3" style={{ fontSize: 12 }}>剩余 / 已售</span>}>
+          <ResponsiveContainer width="100%" height={Math.max(200, stockChart.length * 36)}>
+            <BarChart data={stockChart} layout="vertical" margin={{ left: 140 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e8e8e8" />
+              <XAxis type="number" tick={{ fontSize: 12 }} />
+              <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} width={135} />
+              <Tooltip />
+              <Bar dataKey="remaining" name="剩余" fill="#2c5282" radius={[0, 4, 4, 0]} stackId="a" />
+              <Bar dataKey="sold" name="已售" fill="#e0e0e0" radius={[0, 4, 4, 0]} stackId="a" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
       <Card title="冷链仓总览" extra={<span className="text-ink-3" style={{ fontSize: 12 }}>按产品聚合 · 共 {batches.length} 批次</span>}>
         <Table
           size="small"

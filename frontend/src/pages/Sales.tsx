@@ -1,13 +1,16 @@
-import { Card, Table, Tag, Space, Button, App, Select, Modal, Form, InputNumber, Input } from 'antd';
+import { Card, Table, Tag, Space, Button, App, Select, Modal, Form, InputNumber, Input, Row, Col } from 'antd';
 import { useEffect, useState, useMemo } from 'react';
 import { api } from '@/api/client';
 import { useAuth } from '@/store';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const STATUS: Record<string, { label: string; color: string }> = {
   done:    { label: '已收', color: 'success' },
   partial: { label: '部分', color: 'warning' },
   unpaid:  { label: '未收', color: 'error' },
 };
+
+const CHART_COLORS = ['#2c5282', '#a3b18a', '#c0392b', '#d4a373', '#6b8e23', '#8b6914', '#4a7c59', '#b5651d'];
 
 export default function Sales() {
   const { message } = App.useApp();
@@ -53,6 +56,26 @@ export default function Sales() {
   const totalAmt = filtered.reduce((a, b) => a + b.qty * b.sale_price, 0);
   const totalReceived = filtered.reduce((a, b) => a + b.received_amount, 0);
   const totalUnpaid = totalAmt - totalReceived;
+
+  // 图表数据：按产品
+  const byProduct = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(o => {
+      const key = pname(o.product_id);
+      map[key] = (map[key] || 0) + o.qty * o.sale_price;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [filtered, products]);
+
+  // 图表数据：按客户
+  const byCustomer = useMemo(() => {
+    const map: Record<string, number> = {};
+    filtered.forEach(o => {
+      const key = cname(o.customer_id);
+      map[key] = (map[key] || 0) + o.qty * o.sale_price;
+    });
+    return Object.entries(map).map(([name, value]) => ({ name, value }));
+  }, [filtered, customers]);
 
   const fields: any[] = [];
 
@@ -122,6 +145,43 @@ export default function Sales() {
         <div><div className="text-ink-3" style={{ fontSize: 11, letterSpacing: '0.1em' }}>已收款</div><div className="num-display moss">¥ {totalReceived.toLocaleString()}</div></div>
         <div><div className="text-ink-3" style={{ fontSize: 11, letterSpacing: '0.1em' }}>未收款</div><div className="num-display burgundy">¥ {totalUnpaid.toLocaleString()}</div></div>
       </div>
+
+      {/* 销售图表 */}
+      <Row gutter={24} style={{ marginBottom: 24 }}>
+        <Col span={12}>
+          <Card size="small" title="按产品销售额">
+            {byProduct.length === 0 ? (
+              <div className="text-ink-3" style={{ textAlign: 'center', padding: 40 }}>暂无数据</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={byProduct} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
+                    {byProduct.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </Col>
+        <Col span={12}>
+          <Card size="small" title="按客户销售额">
+            {byCustomer.length === 0 ? (
+              <div className="text-ink-3" style={{ textAlign: 'center', padding: 40 }}>暂无数据</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie data={byCustomer} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }: any) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}>
+                    {byCustomer.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => `¥ ${Number(v).toLocaleString()}`} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
+          </Card>
+        </Col>
+      </Row>
+
       <Table
         size="small"
         loading={loading}
@@ -137,7 +197,18 @@ export default function Sales() {
           { title: '单价', dataIndex: 'sale_price', width: 90, align: 'right' as const, render: (v: number) => <span style={{ fontFamily: 'var(--font-mono)' }}>¥ {v.toFixed(2)}</span> },
           { title: '总额', width: 110, align: 'right' as const, render: (_: any, r: any) => <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 500 }}>¥ {(r.qty * r.sale_price).toFixed(0)}</span> },
           { title: '税率', dataIndex: 'tax_rate', width: 80, render: (v: number) => <Tag color={v === 1 ? 'gold' : 'blue'}>{v}%</Tag> },
-          { title: '佣金', dataIndex: 'commission_amt', width: 100, align: 'right' as const, render: (v: number, r: any) => <span style={{ fontFamily: 'var(--font-mono)' }}>¥ {v.toFixed(2)}<span className="text-ink-3" style={{ fontSize: 10 }}> ({r.commission_rate}%)</span></span> },
+          { title: '佣金', dataIndex: 'commission_amt', width: 130, align: 'right' as const, render: (v: number, r: any) => {
+            const prod = products.find(p => p.id === r.product_id);
+            const isProduct = prod?.commission_rate != null && prod.commission_rate === r.commission_rate;
+            return (
+              <span style={{ fontFamily: 'var(--font-mono)' }}>
+                ¥ {v.toFixed(2)}
+                <span className="text-ink-3" style={{ fontSize: 10 }}> ({r.commission_rate}%</span>
+                {r.commission_rate > 0 && <Tag color={isProduct ? 'blue' : 'gold'} style={{ fontSize: 9, marginLeft: 2, lineHeight: '14px', padding: '0 3px' }}>{isProduct ? '产品' : '个人'}</Tag>}
+                <span className="text-ink-3" style={{ fontSize: 10 }}>)</span>
+              </span>
+            );
+          }},
           { title: '日期', dataIndex: 'sale_date', width: 110 },
           { title: '状态', dataIndex: 'receive_status', width: 80, render: (v: string) => <Tag color={STATUS[v]?.color}>{STATUS[v]?.label || v}</Tag> },
           { title: '操作', width: 120, align: 'right' as const, fixed: 'right' as const, render: (_: any, r: any) => (
@@ -218,6 +289,27 @@ export default function Sales() {
           </Form.Item>
           <Form.Item name="qty" label="数量（吨）" rules={[{ required: true, message: '请输入数量' }]} initialValue={1}>
             <InputNumber min={1} style={{ width: '100%' }} onChange={(val) => setSelectedQty(val || 1)} />
+          </Form.Item>
+          <Form.Item noStyle shouldUpdate={(prev, curr) => prev.product_id !== curr.product_id || prev.qty !== curr.qty || prev.sale_price !== curr.sale_price}>
+            {({ getFieldValue }) => {
+              const pid = getFieldValue('product_id');
+              const qty = getFieldValue('qty') || 0;
+              const price = getFieldValue('sale_price') || 0;
+              const product = products.find(p => p.id === pid);
+              const productRate = product?.commission_rate;
+              const userRate = user?.default_commission_rate || 0;
+              const rate = productRate != null ? productRate : userRate;
+              const amt = qty * price * rate / 100;
+              return (
+                <Form.Item label="佣金">
+                  <Input
+                    disabled
+                    value={pid ? `${rate}%  ${productRate != null ? '(产品佣金)' : '(个人佣金)'}  ≈ ¥ ${amt.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '选择产品后自动计算'}
+                    style={{ color: rate > 0 ? 'var(--copper)' : 'var(--ink-3)' }}
+                  />
+                </Form.Item>
+              );
+            }}
           </Form.Item>
           <Form.Item noStyle shouldUpdate={(prev, curr) => prev.qty !== curr.qty || prev.sale_price !== curr.sale_price}>
             {({ getFieldValue }) => {

@@ -38,7 +38,13 @@ export default function Movements() {
 
   const fields: FieldDef[] = [
     { name: 'batch_id', label: '批次', type: 'select', required: true,
-      options: batches.map(b => ({ value: b.id, label: `${b.batch_no} · ${productOfBatch(b.id)} (剩 ${b.qty_remaining} 吨)` })) },
+      options: [
+        { value: -1, label: '🆕 新建批次（入库/退货）' },
+        ...batches.map(b => ({ value: b.id, label: `${b.batch_no} · ${productOfBatch(b.id)} (剩 ${b.qty_remaining} 吨)` })),
+      ] },
+    { name: 'product_id', label: '产品（新建批次时必选）', type: 'select', required: false,
+      options: products.map(p => ({ value: p.id, label: `${p.category} · ${p.factory_code} · ${p.spec}` })) },
+    { name: 'warehouse', label: '仓库位置（新建批次时填写）', placeholder: '如：佛山冷库A' },
     { name: 'type', label: '类型', type: 'select', required: true, options: [
       { value: 'in', label: '入库' }, { value: 'out', label: '出库' },
       { value: 'transfer', label: '调拨' }, { value: 'loss', label: '损耗' }, { value: 'return', label: '退货' },
