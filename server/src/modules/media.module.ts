@@ -64,10 +64,9 @@ export class MediaController {
     return this.repo.find({ where, order: { id: 'DESC' } });
   }
 
-  // 文件上传 — warehouse 或 boss 才允许
+  // 文件上传 — 登录即可（前端权限矩阵控制显示）
   @Post('upload')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('warehouse', 'boss', 'admin')
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '上传图片/视频（限 warehouse/boss）' })
   @ApiConsumes('multipart/form-data')
