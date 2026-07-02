@@ -17,7 +17,7 @@ export class ProductsService {
     private ds: DataSource,
   ) {}
 
-  /** 列表（带所有税票价 + 实际库存 + 首张图片） */
+  /** 列表（带所有税票价 + 实际库存 + 图片列表） */
   async list() {
     const products = await this.products.find({ order: { id: 'DESC' } });
     const prices = await this.prices.find();
@@ -25,18 +25,22 @@ export class ProductsService {
     const batches = await this.ds.query(
       `SELECT product_id, SUM(qty_remaining) as total_remaining, COUNT(*) as batch_count FROM inventory_batches GROUP BY product_id`
     );
-    // 查每个产品的首张图片
+    // 查每个产品的所有图片
     const images = await this.ds.query(
-      `SELECT m.product_id, m.file_path as image_url FROM media_assets m WHERE m.id IN (SELECT MIN(id) FROM media_assets GROUP BY product_id)`
+      `SELECT product_id, file_path FROM media_assets WHERE type = 'image' ORDER BY id ASC`
     );
     const stockMap = new Map((batches as any[]).map((b: any) => [b.product_id, { remaining: b.total_remaining ?? 0, count: b.batch_count ?? 0 }]));
-    const imageMap = new Map((images as any[]).map((img: any) => [img.product_id, img.image_url]));
+    const imageMap = new Map<number, string[]>();
+    (images as any[]).forEach((img: any) => {
+      if (!imageMap.has(img.product_id)) imageMap.set(img.product_id, []);
+      imageMap.get(img.product_id)!.push(img.file_path);
+    });
     return products.map(p => ({
       ...p,
       prices: prices.filter(pr => pr.product_id === p.id),
       stock_remaining: stockMap.get(p.id)?.remaining ?? 0,
       batch_count: stockMap.get(p.id)?.count ?? 0,
-      image_url: imageMap.get(p.id) || null,
+      images: imageMap.get(p.id) || [],
     }));
   }
 
