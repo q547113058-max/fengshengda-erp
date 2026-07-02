@@ -1,5 +1,5 @@
-import { Card, Descriptions, Table, Tabs, Tag, Image, Empty, Button, Input, InputNumber, Space, App } from 'antd';
-import { PlusOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Table, Tabs, Tag, Image, Empty, Button, Input, InputNumber, Space, App, Upload, Popconfirm } from 'antd';
+import { PlusOutlined, DeleteOutlined, UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
@@ -57,6 +57,10 @@ export default function ProductDetail() {
     await api.update('products', product.id, { prices: cleaned });
     message.success('价格已保存');
     reload();
+  };
+
+  const removeMedia = async (mediaId: number) => {
+    try { await api.remove('media', mediaId); message.success('已删除'); reload(); } catch (e: any) { message.error(e.message); }
   };
 
   return (
@@ -150,16 +154,42 @@ export default function ProductDetail() {
           },
           {
             key: 'media', label: '图片资料',
-            children: media.length === 0 ? <Empty description="暂无图片" /> : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
-                {media.map(m => (
-                  <div key={m.id} style={{ border: '1px solid var(--line)', background: 'var(--paper-2)', padding: 8 }}>
-                    <Image src={m.file_path} alt="产品图" style={{ width: '100%', height: 140, objectFit: 'cover' }} />
-                    {m.remark && <div style={{ fontSize: 12, marginTop: 4 }}>{m.remark}</div>}
-                    <div className="text-ink-3" style={{ fontSize: 11, marginTop: 4 }}>{new Date(m.created_at).toLocaleString()}</div>
+            children: (
+              <>
+                <div style={{ marginBottom: 12 }}>
+                  <Upload
+                    showUploadList={false}
+                    beforeUpload={async (file: File) => {
+                      try {
+                        await api.uploadFile(file, { product_id: +id!, type: 'image', uploader_id: user.id });
+                        message.success('上传成功');
+                        reload();
+                      } catch (e: any) {
+                        message.error(e.message || '上传失败');
+                      }
+                      return false;
+                    }}
+                  >
+                    <Button type="primary" icon={<UploadOutlined />}>上传图片</Button>
+                  </Upload>
+                </div>
+                {media.length === 0 ? <Empty description="暂无图片" /> : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+                    {media.map(m => (
+                      <div key={m.id} style={{ border: '1px solid var(--line)', background: 'var(--paper-2)', padding: 8, position: 'relative' }}>
+                        <Image src={m.file_path} alt="产品图" style={{ width: '100%', height: 140, objectFit: 'cover' }} />
+                        {m.remark && <div style={{ fontSize: 12, marginTop: 4 }}>{m.remark}</div>}
+                        <div className="text-ink-3" style={{ fontSize: 11, marginTop: 4 }}>{new Date(m.created_at).toLocaleString()}</div>
+                        <div style={{ position: 'absolute', top: 4, right: 4 }}>
+                          <Popconfirm title="删除该图片？" onConfirm={() => removeMedia(m.id)}>
+                            <Button size="small" danger icon={<DeleteOutlined />} />
+                          </Popconfirm>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             ),
           },
         ]}
