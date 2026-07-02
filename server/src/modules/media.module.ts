@@ -67,7 +67,7 @@ export class MediaController {
   // 文件上传 — warehouse 或 boss 才允许
   @Post('upload')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('warehouse', 'boss')
+  @Roles('warehouse', 'boss', 'admin')
   @ApiBearerAuth()
   @ApiOperation({ summary: '上传图片/视频（限 warehouse/boss）' })
   @ApiConsumes('multipart/form-data')
