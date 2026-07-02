@@ -19,7 +19,7 @@ export class ProductPrice {
   @Column({ type: 'real' })
   price: number;
 
-  @Column({ name: 'effective_from', type: 'date', default: () => 'CURRENT_DATE' })
+  @Column({ name: 'effective_from', type: 'date', default: () => '(CURRENT_DATE)' })
   effective_from: string;
 
   // 价格备注（如：1%农副价、散客价、批发价）
