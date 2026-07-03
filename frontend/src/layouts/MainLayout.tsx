@@ -5,7 +5,7 @@ import {
   DashboardOutlined, AppstoreOutlined, ShoppingCartOutlined, ShopOutlined,
   ContainerOutlined, FileTextOutlined, PictureOutlined, ShoppingOutlined,
   TeamOutlined, UserOutlined, DollarOutlined, AccountBookOutlined,
-  SettingOutlined, LogoutOutlined,
+  SettingOutlined, LogoutOutlined, GlobalOutlined,
 } from '@ant-design/icons';
 import { useAuth, Role } from '@/store';
 import { canView } from '@/utils/permissions';
@@ -25,6 +25,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { key: '/',              label: '概览',       icon: <DashboardOutlined />,    section: '概览',  roles: ['boss','admin','finance','warehouse','sales'] },
   { key: '/products',      label: '产品',       icon: <AppstoreOutlined />,     section: '产品',  module: 'products',  roles: ['boss','admin','finance','warehouse','sales'] },
+  { key: '/website-products', label: '官网产品',   icon: <GlobalOutlined />,       section: '产品',  module: 'products',  roles: ['boss','admin','finance','warehouse','sales'] },
   { key: '/purchase',      label: '采购',       icon: <ShoppingCartOutlined />, section: '采购',  module: 'purchase',  roles: ['boss','admin','finance','warehouse'] },
   { key: '/suppliers',     label: '供应商',     icon: <ShopOutlined />,         section: '采购',  module: 'suppliers', roles: ['boss','admin','finance','warehouse'] },
   { key: '/inventory',     label: '库存',       icon: <ContainerOutlined />,    section: '仓储',  module: 'inventory', roles: ['boss','admin','finance','warehouse'] },

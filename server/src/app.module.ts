@@ -20,6 +20,7 @@ import { CommissionRecord } from './entities/commission-record.entity';
 import { PaymentAccount } from './entities/payment-account.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { OrderSequence } from './entities/order-sequence.entity';
+import { WebsiteProduct } from './entities/website-product.entity';
 
 import { AuthModule } from './modules/auth.module';
 import { ProductsModule } from './modules/products.module';
@@ -36,6 +37,7 @@ import { UsersModule } from './modules/users.module';
 import { SeedModule } from './modules/seed.module';
 import { HealthModule } from './modules/health.module';
 import { LoggingModule } from './common/logging.module';
+import { WebsiteProductsModule } from './modules/website-products.module';
 
 @Global()
 @Module({
@@ -70,6 +72,7 @@ export class GlobalRepositoryModule {}
     UsersModule,
     SeedModule,
     HealthModule,
+    WebsiteProductsModule,
     LoggingModule,
   ],
   providers: [

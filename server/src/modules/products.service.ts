@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Product } from '../entities/product.entity';
 import { ProductPrice } from '../entities/product-price.entity';
+import { WebsiteProduct } from '../entities/website-product.entity';
 import { InventoryBatch } from '../entities/inventory-batch.entity';
 import { InventoryMovement } from '../entities/inventory-movement.entity';
 import { CreateProductDto, UpdateProductDto, ProductPriceDto, UpdatePriceDto } from '../dto/product.dto';
@@ -14,19 +15,18 @@ export class ProductsService {
   constructor(
     @InjectRepository(Product) private products: Repository<Product>,
     @InjectRepository(ProductPrice) private prices: Repository<ProductPrice>,
+    @InjectRepository(WebsiteProduct) private webProducts: Repository<WebsiteProduct>,
     private ds: DataSource,
   ) {}
 
-  /** 列表（带所有税票价 + 实际库存 + 图片列表），publicOnly 过滤 show_on_website */
+  /** 列表（带税票价+库存+图片），publicOnly 时合并官网产品 */
   async list(publicOnly = false) {
     const where: any = publicOnly ? { show_on_website: true } : {};
     const products = await this.products.find({ where, order: { id: 'DESC' } });
     const prices = await this.prices.find();
-    // 查每个产品的实际库存（批次剩余合计）
     const batches = await this.ds.query(
       `SELECT product_id, SUM(qty_remaining) as total_remaining, COUNT(*) as batch_count FROM inventory_batches GROUP BY product_id`
     );
-    // 查每个产品的所有图片
     const images = await this.ds.query(
       `SELECT product_id, file_path FROM media_assets WHERE type = 'image' ORDER BY id ASC`
     );
@@ -36,13 +36,33 @@ export class ProductsService {
       if (!imageMap.has(img.product_id)) imageMap.set(img.product_id, []);
       imageMap.get(img.product_id)!.push(img.file_path);
     });
-    return products.map(p => ({
+
+    const result = products.map(p => ({
       ...p,
       prices: prices.filter(pr => pr.product_id === p.id),
       stock_remaining: stockMap.get(p.id)?.remaining ?? 0,
       batch_count: stockMap.get(p.id)?.count ?? 0,
       images: imageMap.get(p.id) || [],
+      _source: 'product' as const,
     }));
+
+    // 公开模式：合并官网产品
+    if (publicOnly) {
+      const webProducts = await this.webProducts.find({ order: { id: 'DESC' } });
+      const merged = webProducts.map(wp => ({
+        ...wp,
+        prices: wp.price ? [{ price: wp.price, remark: wp.price_remark || '', tax_rate: 0 }] : [],
+        stock_remaining: null,
+        batch_count: 0,
+        images: [],
+        qty_per_unit: null,
+        commission_rate: null,
+        _source: 'website' as const,
+      }));
+      return [...result, ...merged];
+    }
+
+    return result;
   }
 
   /** 单个 */

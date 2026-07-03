@@ -8,6 +8,7 @@ import { ProductPrice } from './entities/product-price.entity';
 import { Supplier } from './entities/supplier.entity';
 import { PurchaseOrder } from './entities/purchase-order.entity';
 import { InventoryBatch } from './entities/inventory-batch.entity';
+import { WebsiteProduct } from './entities/website-product.entity';
 import { InventoryMovement } from './entities/inventory-movement.entity';
 import { MediaAsset } from './entities/media-asset.entity';
 import { Customer } from './entities/customer.entity';
@@ -21,7 +22,7 @@ export const ALL_ENTITIES = [
   User, Product, ProductPrice, Supplier, PurchaseOrder,
   InventoryBatch, InventoryMovement, MediaAsset, Customer,
   SalesOrder, CommissionRecord, PaymentAccount, PaymentTransaction,
-  OrderSequence,
+  OrderSequence, WebsiteProduct,
 ];
 
 const logger = new Logger('ConfigFactory');
