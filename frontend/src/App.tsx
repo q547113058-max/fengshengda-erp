@@ -26,6 +26,7 @@ const AccountLedger  = lazy(() => import('./pages/AccountLedger'));
 const UserSettings   = lazy(() => import('./pages/UserSettings'));
 const WebsiteProductsPage = lazy(() => import('./pages/WebsiteProducts'));
 const WebsiteProductDetailPage = lazy(() => import("./pages/WebsiteProductDetail"));
+const TagsPage = lazy(() => import("./pages/Tags"));
 
 function PageLoader() {
   return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -88,6 +89,7 @@ export default function App() {
             <Route path="/finance/pay"     element={<Guard roles={['boss','admin','finance']}><FinancePay /></Guard>} />
             <Route path="/finance/ledger"  element={<Guard roles={['boss','admin','finance']}><AccountLedger /></Guard>} />
             <Route path="/settings/users"  element={<UserSettings />} />
+            <Route path="/settings/tags" element={<Guard roles={["boss","admin"]}><TagsPage /></Guard>} />
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>

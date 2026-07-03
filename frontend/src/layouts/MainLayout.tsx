@@ -6,6 +6,7 @@ import {
   ContainerOutlined, FileTextOutlined, PictureOutlined, ShoppingOutlined,
   TeamOutlined, UserOutlined, DollarOutlined, AccountBookOutlined,
   SettingOutlined, LogoutOutlined, GlobalOutlined,
+  TagOutlined,
 } from '@ant-design/icons';
 import { useAuth, Role } from '@/store';
 import { canView } from '@/utils/permissions';
@@ -40,6 +41,7 @@ const NAV: NavItem[] = [
   { key: '/finance/ledger',label: '账户流水',   icon: <AccountBookOutlined />,  section: '财务',  module: 'finance',   roles: ['boss','admin','finance'] },
 
   { key: '/settings/users',label: '用户权限',   icon: <SettingOutlined />,      section: '系统',  roles: ['boss','admin'] },
+  { key: "/settings/tags", label: "标签管理", icon: <TagOutlined />, section: "系统", roles: ["boss","admin"] },
 ];
 
 const SECTION_ORDER = ['概览','产品','采购','仓储','销售','财务','系统'];
