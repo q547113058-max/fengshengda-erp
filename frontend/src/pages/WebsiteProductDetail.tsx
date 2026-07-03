@@ -51,8 +51,9 @@ export default function WebsiteProductDetail() {
   };
   useEffect(reload, [id]);
   const [tags, setTags] = useState<any[]>([]);
+  useEffect(() => { api.list<any[]>("tags").then(setTags).catch(() => {}); }, []);
 
-  const fields = useMemo(() => [
+  const fields = useMemo<FieldDef[]>(() => [
   { name: 'category',     label: '品名', required: true },
   { name: 'factory_code', label: '厂号', required: true },
   { name: 'spec',         label: '规格' },
