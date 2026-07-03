@@ -29,6 +29,9 @@ export class WebsiteProduct {
   @Column({ name: 'price_remark', length: 100, nullable: true })
   price_remark: string;
 
+  @Column({ name: 'stock', type: 'real', nullable: true })
+  stock: number;
+
   @Column({ type: 'text', nullable: true })
   remark: string;
 

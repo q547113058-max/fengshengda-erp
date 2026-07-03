@@ -1,5 +1,5 @@
-import { Card, Descriptions, Tag, Image, Empty, Button, Upload, Popconfirm, App, Tabs } from 'antd';
-import { UploadOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Table, Tabs, Tag, Image, Empty, Button, Input, InputNumber, Space, App, Upload, Popconfirm } from 'antd';
+import { PlusOutlined, DeleteOutlined, UploadOutlined, EditOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
@@ -16,6 +16,7 @@ const fields: FieldDef[] = [
   { name: 'goods_location', label: '提货地' },
   { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01 },
   { name: 'price_remark', label: '价格备注' },
+  { name: 'stock',        label: '库存(吨)', type: 'number', min: 0, step: 0.01 },
   { name: 'remark',       label: '备注', type: 'textarea' },
 ];
 
@@ -29,6 +30,10 @@ export default function WebsiteProductDetail() {
   const [media, setMedia] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [editPrice, setEditPrice] = useState<number>(0);
+  const [editPriceRemark, setEditPriceRemark] = useState('');
+  const [editStock, setEditStock] = useState<number>(0);
+  const [dirty, setDirty] = useState(false);
 
   const reload = () => {
     if (!id) return;
@@ -39,9 +44,19 @@ export default function WebsiteProductDetail() {
     ]).then(([p, allMedia]) => {
       setProduct(p);
       setMedia(allMedia.filter((m: any) => m.product_id === +id!));
+      setEditPrice(p?.price || 0);
+      setEditPriceRemark(p?.price_remark || '');
+      setEditStock(p?.stock || 0);
+      setDirty(false);
     }).finally(() => setLoading(false));
   };
   useEffect(reload, [id]);
+
+  const save = async () => {
+    await api.update('website-products', product.id, { price: editPrice, price_remark: editPriceRemark, stock: editStock });
+    message.success('已保存');
+    reload();
+  };
 
   const removeMedia = async (mediaId: number) => {
     try { await api.remove('media', mediaId); message.success('已删除'); reload(); } catch (e: any) { message.error(e.message); }
@@ -68,15 +83,59 @@ export default function WebsiteProductDetail() {
               children: (
                 <Descriptions column={2} bordered size="small">
                   <Descriptions.Item label="品名">{product.category}</Descriptions.Item>
+                  <Descriptions.Item label="产地">{product.origin}</Descriptions.Item>
                   <Descriptions.Item label="厂号">{product.factory_code}</Descriptions.Item>
-                  <Descriptions.Item label="规格">{product.spec || '—'}</Descriptions.Item>
-                  <Descriptions.Item label="产地">{product.origin || '—'}</Descriptions.Item>
-                  <Descriptions.Item label="等级">{product.grade ? <Tag color="processing">{product.grade}</Tag> : '—'}</Descriptions.Item>
-                  <Descriptions.Item label="提货地">{product.goods_location || '—'}</Descriptions.Item>
-                  <Descriptions.Item label="展示价">{product.price ? <span style={{ color: '#dc2626', fontWeight: 600 }}>¥ {product.price.toFixed(2)}</span> : '—'}</Descriptions.Item>
-                  <Descriptions.Item label="价格备注">{product.price_remark || '—'}</Descriptions.Item>
+                  <Descriptions.Item label="规格">{product.spec}</Descriptions.Item>
+                  <Descriptions.Item label="等级"><Tag color="processing">{product.grade}</Tag></Descriptions.Item>
+                  <Descriptions.Item label="提货地">{product.goods_location}</Descriptions.Item>
                   <Descriptions.Item label="备注" span={2}>{product.remark || '—'}</Descriptions.Item>
                 </Descriptions>
+              ),
+            },
+            {
+              key: 'price', label: '价格',
+              children: (
+                <>
+                  {canEdit && dirty && (
+                    <div style={{ marginBottom: 12 }}>
+                      <Button size="small" type="primary" onClick={save}>保存价格与库存</Button>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 400 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <InputNumber
+                        value={editPrice}
+                        min={0} step={0.01}
+                        addonBefore="¥"
+                        style={{ width: 180 }}
+                        onChange={v => { setEditPrice(v || 0); setDirty(true); }}
+                        disabled={!canEdit}
+                      />
+                      <Input
+                        value={editPriceRemark}
+                        placeholder="价格备注（如：1%农副价、散客价）"
+                        style={{ flex: 1 }}
+                        onChange={e => { setEditPriceRemark(e.target.value); setDirty(true); }}
+                        disabled={!canEdit}
+                      />
+                    </div>
+                  </div>
+                </>
+              ),
+            },
+            {
+              key: 'stock', label: `库存（${(product.stock || 0).toFixed(2)} 吨）`,
+              children: (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <InputNumber
+                    value={editStock}
+                    min={0} step={0.01}
+                    addonAfter="吨"
+                    style={{ width: 180 }}
+                    onChange={v => { setEditStock(v || 0); setDirty(true); }}
+                    disabled={!canEdit}
+                  />
+                </div>
               ),
             },
             {
