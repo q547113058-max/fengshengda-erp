@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Card, Table, Tag, Space, Button, Popconfirm, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/store';
@@ -8,6 +9,7 @@ import EditModal, { FieldDef } from '@/components/EditModal';
 export default function WebsiteProducts() {
   const { message } = App.useApp();
   const user = useAuth(s => s.user)!;
+  const nav = useNavigate();
   const canEdit = canEditPerm(user.role, 'products');
   const [list, setList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,6 +50,7 @@ export default function WebsiteProducts() {
         loading={loading}
         rowKey="id"
         dataSource={list}
+        onRow={(r: any) => ({ onClick: () => nav(`/website-products/${r.id}`), style: { cursor: "pointer" } })}
         pagination={{ pageSize: 20 }}
         columns={[
           { title: '品名', dataIndex: 'category', width: 120, render: (v: string, r: any) => (

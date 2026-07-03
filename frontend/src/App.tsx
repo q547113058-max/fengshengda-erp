@@ -25,6 +25,7 @@ const FinancePay     = lazy(() => import('./pages/FinancePay'));
 const AccountLedger  = lazy(() => import('./pages/AccountLedger'));
 const UserSettings   = lazy(() => import('./pages/UserSettings'));
 const WebsiteProductsPage = lazy(() => import('./pages/WebsiteProducts'));
+const WebsiteProductDetailPage = lazy(() => import("./pages/WebsiteProductDetail"));
 
 function PageLoader() {
   return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="/products"      element={<Guard roles={['boss','admin','finance','warehouse','sales']}><Products /></Guard>} />
             <Route path="/products/:id"  element={<Guard roles={['boss','admin','finance','warehouse','sales']}><ProductDetail /></Guard>} />
             <Route path="/website-products" element={<Guard roles={['boss','admin','finance','warehouse','sales']}><WebsiteProductsPage /></Guard>} />
+            <Route path="/website-products/:id" element={<Guard roles={['boss','admin','finance','warehouse','sales']}><WebsiteProductDetailPage /></Guard>} />
             <Route path="/purchase"      element={<Guard roles={['boss','admin','finance','warehouse']}><Purchase /></Guard>} />
             <Route path="/suppliers"     element={<Guard roles={['boss','admin','finance','warehouse']}><Suppliers /></Guard>} />
             <Route path="/inventory"     element={<Guard roles={['boss','admin','finance','warehouse']}><Inventory /></Guard>} />
