@@ -62,19 +62,18 @@ export class SeedService implements OnApplicationBootstrap {
 
     // === 标签 ===
     await this.tags.save([
-      { id: 1, name: '置顶',     sort_order: 0, can_delete: false, show_on_website: false },
-      { id: 2, name: '国产精选', sort_order: 1, can_delete: false, show_on_website: true },
-      { id: 3, name: '进口精品', sort_order: 2, can_delete: false, show_on_website: true },
+      { id: 1, name: '国产精选', sort_order: 1, can_delete: false, show_on_website: true },
+      { id: 2, name: '进口精品', sort_order: 2, can_delete: false, show_on_website: true },
     ]);
 
     // === 产品 ===
     const products = await this.products.save([
-      { id: 1, category: '卤鸡爪',   origin: '山东聊城', factory_code: 'JZ-LJ-001', spec: '30g/袋×50袋/箱',  grade: 'A级',  qty_per_unit: 50,  goods_location: '佛山冷库A', tag_ids: [1, 2], remark: '袋装卤味，线下主力' },
-      { id: 2, category: '卤鸡爪',   origin: '山东聊城', factory_code: 'JZ-LJ-002', spec: '50g/袋×40袋/箱',  grade: 'A级',  qty_per_unit: 40,  goods_location: '佛山冷库A', tag_ids: [2],    remark: '大袋家庭装' },
-      { id: 3, category: '泡椒凤爪', origin: '四川成都', factory_code: 'JZ-PJ-088', spec: '160g/袋×30袋/箱', grade: '精品', qty_per_unit: 30,  goods_location: '江门冷库B', tag_ids: [1, 3], remark: '网红爆款' },
-      { id: 4, category: '柠檬凤爪', origin: '广东开平', factory_code: 'JZ-NM-201', spec: '200g/盒×24盒/箱', grade: 'B级',  qty_per_unit: 24,  goods_location: '开平冷库',  tag_ids: [2],    remark: '本地厂家代工' },
-      { id: 5, category: '虎皮凤爪', origin: '广东广州', factory_code: 'JZ-HP-055', spec: '500g/袋×10袋/箱', grade: 'A级',  qty_per_unit: 10,  goods_location: '佛山冷库A', tag_ids: [3],    remark: '餐饮渠道供应' },
-      { id: 6, category: '酱卤鸡爪', origin: '广东江门', factory_code: 'JZ-JL-050', spec: '100g/袋×60袋/箱', grade: 'A级',  qty_per_unit: 60,  goods_location: '开平冷库',  tag_ids: [1, 2], remark: '散装称重款' },
+      { id: 1, category: '卤鸡爪',   origin: '山东聊城', factory_code: 'JZ-LJ-001', spec: '30g/袋×50袋/箱',  grade: 'A级',  qty_per_unit: 50,  goods_location: '佛山冷库A', tag_ids: [1],    remark: '袋装卤味，线下主力' },
+      { id: 2, category: '卤鸡爪',   origin: '山东聊城', factory_code: 'JZ-LJ-002', spec: '50g/袋×40袋/箱',  grade: 'A级',  qty_per_unit: 40,  goods_location: '佛山冷库A', tag_ids: [1],    remark: '大袋家庭装' },
+      { id: 3, category: '泡椒凤爪', origin: '四川成都', factory_code: 'JZ-PJ-088', spec: '160g/袋×30袋/箱', grade: '精品', qty_per_unit: 30,  goods_location: '江门冷库B', tag_ids: [2],    remark: '网红爆款' },
+      { id: 4, category: '柠檬凤爪', origin: '广东开平', factory_code: 'JZ-NM-201', spec: '200g/盒×24盒/箱', grade: 'B级',  qty_per_unit: 24,  goods_location: '开平冷库',  tag_ids: [1],    remark: '本地厂家代工' },
+      { id: 5, category: '虎皮凤爪', origin: '广东广州', factory_code: 'JZ-HP-055', spec: '500g/袋×10袋/箱', grade: 'A级',  qty_per_unit: 10,  goods_location: '佛山冷库A', tag_ids: [2],    remark: '餐饮渠道供应' },
+      { id: 6, category: '酱卤鸡爪', origin: '广东江门', factory_code: 'JZ-JL-050', spec: '100g/袋×60袋/箱', grade: 'A级',  qty_per_unit: 60,  goods_location: '开平冷库',  tag_ids: [1],    remark: '散装称重款' },
     ]);
 
     // === 双税票价 ===
