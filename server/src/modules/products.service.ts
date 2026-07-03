@@ -49,16 +49,35 @@ export class ProductsService {
     // 公开模式：合并官网产品
     if (publicOnly) {
       const webProducts = await this.webProducts.find({ order: { id: 'DESC' } });
-      const merged = webProducts.map(wp => ({
-        ...wp,
-        prices: wp.price ? [{ price: wp.price, remark: wp.price_remark || '', tax_rate: 0 }] : [],
-        stock_remaining: null,
-        batch_count: 0,
-        images: [],
-        qty_per_unit: null,
-        commission_rate: null,
-        _source: 'website' as const,
-      }));
+      // 查官网产品的图片
+      const webIds = webProducts.map(wp => wp.id);
+      const webImages = webIds.length > 0 ? await this.ds.query(
+        `SELECT product_id, file_path FROM media_assets WHERE product_id IN (${webIds.join(',')}) AND type = 'image' ORDER BY id ASC`
+      ) : [];
+      const webImageMap = new Map<number, string[]>();
+      (webImages as any[]).forEach((img: any) => {
+        if (!webImageMap.has(img.product_id)) webImageMap.set(img.product_id, []);
+        webImageMap.get(img.product_id)!.push(img.file_path);
+      });
+
+      const merged = webProducts.map(wp => {
+        // prices: 优先解析 prices_json，回退到单条 price 字段
+        let prices: any[] = [];
+        try { prices = JSON.parse((wp as any).prices_json || '[]'); } catch {}
+        if (prices.length === 0 && wp.price) {
+          prices = [{ price: wp.price, remark: wp.price_remark || '', tax_rate: 0 }];
+        }
+        return {
+          ...wp,
+          prices,
+          stock_remaining: (wp as any).stock || null,
+          batch_count: 0,
+          images: webImageMap.get(wp.id) || [],
+          qty_per_unit: null,
+          commission_rate: null,
+          _source: 'website' as const,
+        };
+      });
       return [...result, ...merged];
     }
 

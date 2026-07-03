@@ -63,7 +63,12 @@ export default function WebsiteProductDetail() {
   useEffect(reload, [id]);
 
   const savePrices = async () => {
-    await api.update('website-products', product.id, { prices_json: JSON.stringify(editPrices) });
+    const first = editPrices[0] || { price: 0, remark: '' };
+    await api.update('website-products', product.id, {
+      prices_json: JSON.stringify(editPrices),
+      price: first.price,
+      price_remark: first.remark,
+    });
     message.success('价格已保存');
     reload();
   };
