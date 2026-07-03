@@ -44,9 +44,9 @@ export default function WebsiteProductDetail() {
     ]).then(([p, allMedia]) => {
       setProduct(p);
       setMedia(allMedia.filter((m: any) => m.product_id === +id!));
-      setEditPrice(p?.price || 0);
-      setEditPriceRemark(p?.price_remark || '');
-      setEditStock(p?.stock || 0);
+      setEditPrice((p as any).price || 0);
+      setEditPriceRemark((p as any).price_remark || '');
+      setEditStock((p as any).stock || 0);
       setDirty(false);
     }).finally(() => setLoading(false));
   };

@@ -2,7 +2,6 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColum
 import { User } from './user.entity';
 import { ProductPrice } from './product-price.entity';
 import { InventoryBatch } from './inventory-batch.entity';
-import { MediaAsset } from './media-asset.entity';
 
 @Entity('products')
 export class Product {
@@ -48,7 +47,4 @@ export class Product {
 
   @OneToMany(() => InventoryBatch, ib => ib.product)
   batches: InventoryBatch[];
-
-  @OneToMany(() => MediaAsset, m => m.product)
-  media: MediaAsset[];
 }

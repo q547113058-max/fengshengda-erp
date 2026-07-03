@@ -11,9 +11,8 @@ export class MediaAsset {
   @Column({ name: 'product_id', nullable: true })
   product_id: number;
 
-  @ManyToOne(() => Product, p => p.media)
-  @JoinColumn({ name: 'product_id' })
-  product: Product;
+  // Note: product FK removed to support website_products table
+  // product_id can reference either products.id or website_products.id
 
   @Column({ name: 'batch_id', nullable: true })
   batch_id: number;
