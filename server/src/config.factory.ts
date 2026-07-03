@@ -17,8 +17,10 @@ import { CommissionRecord } from './entities/commission-record.entity';
 import { PaymentAccount } from './entities/payment-account.entity';
 import { PaymentTransaction } from './entities/payment-transaction.entity';
 import { OrderSequence } from './entities/order-sequence.entity';
+import { Tag } from './entities/tag.entity';
 
 export const ALL_ENTITIES = [
+  Tag,
   User, Product, ProductPrice, Supplier, PurchaseOrder,
   InventoryBatch, InventoryMovement, MediaAsset, Customer,
   SalesOrder, CommissionRecord, PaymentAccount, PaymentTransaction,

@@ -47,6 +47,7 @@ export default function Products() {
     { name: 'price_remark', label: '价格备注', placeholder: '如：1%农副价、散客价' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1, placeholder: '如：3，留空则用业务员自有佣金' },
     { name: 'show_on_website', label: '展示到官网', type: 'switch', initialValue: false },
+    { name: 'tag_ids', label: '标签', type: 'select', options: [] },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const editFields: FieldDef[] = [
@@ -59,6 +60,7 @@ export default function Products() {
     { name: 'goods_location', label: '货地' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1 },
     { name: 'show_on_website', label: '展示到官网', type: 'switch' },
+    { name: 'tag_ids', label: '标签', type: 'select', options: [] },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const fields = editing ? editFields : newFields;

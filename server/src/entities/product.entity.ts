@@ -39,6 +39,9 @@ export class Product {
   @Column({ name: 'show_on_website', type: 'boolean', default: false })
   show_on_website: boolean;
 
+  @Column({ name: 'tag_ids', type: 'simple-json', nullable: true })
+  tag_ids: number[];
+
   @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 

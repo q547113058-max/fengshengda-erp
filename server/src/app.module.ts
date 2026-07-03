@@ -38,6 +38,7 @@ import { SeedModule } from './modules/seed.module';
 import { HealthModule } from './modules/health.module';
 import { LoggingModule } from './common/logging.module';
 import { WebsiteProductsModule } from './modules/website-products.module';
+import { TagsModule } from './modules/tags.module';
 
 @Global()
 @Module({
@@ -73,6 +74,7 @@ export class GlobalRepositoryModule {}
     SeedModule,
     HealthModule,
     WebsiteProductsModule,
+    TagsModule,
     LoggingModule,
   ],
   providers: [

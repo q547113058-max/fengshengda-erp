@@ -49,6 +49,7 @@ export class CreateProductDto {
 
   @ApiPropertyOptional({ description: '是否展示到官网' })
   @IsOptional() show_on_website?: boolean;
+  @IsOptional() tag_ids?: number[];
 
   @ApiPropertyOptional({ type: [ProductPriceDto] })
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProductPriceDto)
@@ -66,6 +67,7 @@ export class UpdateProductDto {
   @IsOptional() @IsString() remark?: string;
   @IsOptional() @IsNumber() @Min(0) commission_rate?: number;
   @IsOptional() show_on_website?: boolean;
+  @IsOptional() tag_ids?: number[];
   @IsOptional() @IsArray() @ValidateNested({ each: true }) @Type(() => ProductPriceDto)
   prices?: ProductPriceDto[];
 }

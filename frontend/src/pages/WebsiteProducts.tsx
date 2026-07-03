@@ -32,6 +32,7 @@ export default function WebsiteProducts() {
     { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01, placeholder: '如：18.80' },
     { name: 'price_remark', label: '价格备注', placeholder: '如：农副价' },
     { name: 'remark',       label: '备注', type: 'textarea' },
+    { name: 'tag_ids', label: '标签', type: 'select', options: [] },
   ];
 
   const openNew = () => { setEditing(null); setModalOpen(true); };

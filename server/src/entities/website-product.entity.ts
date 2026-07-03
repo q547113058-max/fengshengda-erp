@@ -32,6 +32,9 @@ export class WebsiteProduct {
   @Column({ name: 'prices_json', type: 'text', nullable: true })
   prices_json: string;
 
+  @Column({ name: 'tag_ids', type: 'simple-json', nullable: true })
+  tag_ids: number[];
+
   @Column({ name: 'stock', type: 'real', nullable: true })
   stock: number;
 
