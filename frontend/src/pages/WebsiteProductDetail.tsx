@@ -97,6 +97,7 @@ export default function WebsiteProductDetail() {
                   </div>
                 )}
                 {media.length === 0 ? <Empty description="暂无图片" /> : (
+                <Image.PreviewGroup>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
                     {media.map(m => (
                       <div key={m.id} style={{ border: '1px solid var(--line)', background: 'var(--paper-2)', padding: 8, position: 'relative' }}>
@@ -111,6 +112,7 @@ export default function WebsiteProductDetail() {
                       </div>
                     ))}
                   </div>
+                  </Image.PreviewGroup>
                 )}
               </>
             ),
