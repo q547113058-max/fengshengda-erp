@@ -1,25 +1,13 @@
 import { Card, Descriptions, Tabs, Tag, Image, Empty, Button, Input, InputNumber, Space, App, Upload, Popconfirm } from 'antd';
 import { PlusOutlined, DeleteOutlined, UploadOutlined, EditOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
 import { canEdit as canEditPerm } from '@/utils/permissions';
 import { api } from '@/api/client';
 import EditModal, { FieldDef } from '@/components/EditModal';
 
-const fields: FieldDef[] = [
-  { name: 'category',     label: '品名', required: true },
-  { name: 'factory_code', label: '厂号', required: true },
-  { name: 'spec',         label: '规格' },
-  { name: 'grade',        label: '等级', type: 'select', options: [{ value: 'A级', label: 'A级' }, { value: 'B级', label: 'B级' }, { value: '精品', label: '精品' }] },
-  { name: 'origin',       label: '产地' },
-  { name: 'goods_location', label: '提货地' },
-  { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01 },
-  { name: 'price_remark', label: '价格备注' },
-  { name: 'stock',        label: '库存(吨)', type: 'number', min: 0, step: 0.01 },
-  { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
-  { name: 'remark',       label: '备注', type: 'textarea' },
-];
+
 
 export default function WebsiteProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -63,7 +51,20 @@ export default function WebsiteProductDetail() {
   };
   useEffect(reload, [id]);
   const [tags, setTags] = useState<any[]>([]);
-  useEffect(() => { api.list<any[]>("tags").then(setTags).catch(() => {}); }, []);
+
+  const fields = useMemo(() => [
+  { name: 'category',     label: '品名', required: true },
+  { name: 'factory_code', label: '厂号', required: true },
+  { name: 'spec',         label: '规格' },
+  { name: 'grade',        label: '等级', type: 'select', options: [{ value: 'A级', label: 'A级' }, { value: 'B级', label: 'B级' }, { value: '精品', label: '精品' }] },
+  { name: 'origin',       label: '产地' },
+  { name: 'goods_location', label: '提货地' },
+  { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01 },
+  { name: 'price_remark', label: '价格备注' },
+  { name: 'stock',        label: '库存(吨)', type: 'number', min: 0, step: 0.01 },
+  { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
+  { name: 'remark',       label: '备注', type: 'textarea' },
+  ], [tags]);
 
   const savePrices = async () => {
     const first = editPrices[0] || { price: 0, remark: '' };
