@@ -17,9 +17,10 @@ export class ProductsService {
     private ds: DataSource,
   ) {}
 
-  /** 列表（带所有税票价 + 实际库存 + 图片列表） */
-  async list() {
-    const products = await this.products.find({ order: { id: 'DESC' } });
+  /** 列表（带所有税票价 + 实际库存 + 图片列表），publicOnly 过滤 show_on_website */
+  async list(publicOnly = false) {
+    const where: any = publicOnly ? { show_on_website: true } : {};
+    const products = await this.products.find({ where, order: { id: 'DESC' } });
     const prices = await this.prices.find();
     // 查每个产品的实际库存（批次剩余合计）
     const batches = await this.ds.query(

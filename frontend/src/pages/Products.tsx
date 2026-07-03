@@ -46,6 +46,7 @@ export default function Products() {
     { name: 'price',        label: '单价(元/吨)', type: 'number', min: 0, step: 0.01, placeholder: '如：18.80' },
     { name: 'price_remark', label: '价格备注', placeholder: '如：1%农副价、散客价' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1, placeholder: '如：3，留空则用业务员自有佣金' },
+    { name: 'show_on_website', label: '展示到官网', type: 'switch', initialValue: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const editFields: FieldDef[] = [
@@ -57,6 +58,7 @@ export default function Products() {
     { name: 'qty_per_unit', label: '库存(吨)', type: 'number', min: 0, step: 1 },
     { name: 'goods_location', label: '货地' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1 },
+    { name: 'show_on_website', label: '展示到官网', type: 'switch' },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const fields = editing ? editFields : newFields;
@@ -145,7 +147,6 @@ export default function Products() {
         initial={editing || {}}
         onCancel={() => setModalOpen(false)}
         onSubmit={async (v) => {
-          // 提取价格字段，组装成 prices 数组
           const { price, price_remark, ...productData } = v;
           if (price) {
             productData.prices = [{ price, remark: price_remark || '' }];

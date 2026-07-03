@@ -1,6 +1,6 @@
 // ProductsController — 纯 HTTP 路由 + DTO 验证
 // 业务逻辑全在 ProductsService
-import { Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../common/jwt-auth.guard';
 import { Public } from '../common/public.decorator';
@@ -17,8 +17,8 @@ export class ProductsController {
 
   @Get()
   @Public()
-  @ApiOperation({ summary: '产品列表（含双税票价）' })
-  list() { return this.svc.list(); }
+  @ApiOperation({ summary: '产品列表（含双税票价），?public=true 仅展示上架产品' })
+  list(@Query('public') isPublic?: string) { return this.svc.list(isPublic === 'true'); }
 
   @Get(':id')
   @ApiOperation({ summary: '产品详情' })

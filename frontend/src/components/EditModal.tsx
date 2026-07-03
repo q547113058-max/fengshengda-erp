@@ -1,5 +1,5 @@
 // 通用 Form Modal —— 给每个列表页接"新增/编辑"按钮用
-import { Modal, Form, Input, InputNumber, Select, DatePicker, Upload, Button, App } from 'antd';
+import { Modal, Form, Input, InputNumber, Select, DatePicker, Upload, Button, App, Switch } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { api } from '@/api/client';
@@ -8,7 +8,7 @@ import dayjs from 'dayjs';
 export interface FieldDef {
   name: string;
   label: string;
-  type?: 'text' | 'password' | 'number' | 'select' | 'textarea' | 'date' | 'upload';
+  type?: 'text' | 'password' | 'number' | 'select' | 'textarea' | 'date' | 'upload' | 'switch';
   required?: boolean;
   options?: { value: string | number; label: string }[];
   placeholder?: string;
@@ -41,6 +41,7 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
         let v = initial[f.name] ?? f.initialValue ?? null;
         if (f.type === 'date' && v && typeof v === 'string') v = dayjs(v);
         if (f.type === 'date' && !v) v = null;
+        if (f.type === 'switch') v = v === undefined ? true : !!v;
         init[f.name] = v;
         if (f.type === 'upload' && v) setFileUrl(v);
       });
@@ -81,7 +82,16 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
       cancelText="取消"
     >
       <Form form={form} layout="vertical" style={{ paddingTop: 12 }}>
-        {fields.map(f => f.type === 'upload' ? (
+        {fields.map(f => f.type === 'switch' ? (
+          <Form.Item
+            key={f.name}
+            name={f.name}
+            label={f.label}
+            valuePropName="checked"
+          >
+            <Switch disabled={f.disabled} />
+          </Form.Item>
+        ) : f.type === 'upload' ? (
           <Form.Item
             key={f.name}
             name={f.name}
