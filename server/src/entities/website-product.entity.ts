@@ -23,11 +23,14 @@ export class WebsiteProduct {
   @Column({ name: 'goods_location', length: 80, nullable: true })
   goods_location: string;
 
-  @Column({ type: 'real', nullable: true })
+  @Column({ name: 'price', type: 'real', nullable: true })
   price: number;
 
   @Column({ name: 'price_remark', length: 100, nullable: true })
   price_remark: string;
+
+  @Column({ name: 'prices_json', type: 'text', nullable: true })
+  prices_json: string;
 
   @Column({ name: 'stock', type: 'real', nullable: true })
   stock: number;
