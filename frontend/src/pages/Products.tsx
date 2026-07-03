@@ -49,6 +49,14 @@ export default function Products() {
     { name: 'price_remark', label: '价格备注', placeholder: '如：1%农副价、散客价' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1, placeholder: '如：3，留空则用业务员自有佣金' },
     { name: 'show_on_website', label: '展示到官网', type: 'switch', initialValue: false },
+    { name: 'pin_order', label: '置顶优先级', type: 'select', options: [
+      { value: 0, label: '不置顶' },
+      { value: 1, label: '置顶第1位' },
+      { value: 2, label: '置顶第2位' },
+      { value: 3, label: '置顶第3位' },
+      { value: 4, label: '置顶第4位' },
+      { value: 5, label: '置顶第5位' },
+    ], initialValue: 0 },
     { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
@@ -62,6 +70,14 @@ export default function Products() {
     { name: 'goods_location', label: '货地' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1 },
     { name: 'show_on_website', label: '展示到官网', type: 'switch' },
+    { name: 'pin_order', label: '置顶优先级', type: 'select', options: [
+      { value: 0, label: '不置顶' },
+      { value: 1, label: '置顶第1位' },
+      { value: 2, label: '置顶第2位' },
+      { value: 3, label: '置顶第3位' },
+      { value: 4, label: '置顶第4位' },
+      { value: 5, label: '置顶第5位' },
+    ] },
     { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];

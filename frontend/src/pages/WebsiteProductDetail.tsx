@@ -63,6 +63,14 @@ export default function WebsiteProductDetail() {
   { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01 },
   { name: 'price_remark', label: '价格备注' },
   { name: 'stock',        label: '库存(吨)', type: 'number', min: 0, step: 0.01 },
+  { name: 'pin_order', label: '置顶优先级', type: 'select', options: [
+    { value: 0, label: '不置顶' },
+    { value: 1, label: '置顶第1位' },
+    { value: 2, label: '置顶第2位' },
+    { value: 3, label: '置顶第3位' },
+    { value: 4, label: '置顶第4位' },
+    { value: 5, label: '置顶第5位' },
+  ], initialValue: 0 },
   { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
   { name: 'remark',       label: '备注', type: 'textarea' },
   ], [tags]);
