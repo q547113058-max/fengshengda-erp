@@ -19,11 +19,24 @@ export class ProductsService {
     private ds: DataSource,
   ) {}
 
-  /** 列表（带税票价+库存+图片），publicOnly 时合并官网产品 */
+  /** 列表（带税票价+库存+图片），publicOnly 时仅返回官网产品 */
   async list(publicOnly = false) {
-    const where: any = publicOnly ? { show_on_website: true } : {};
-    const products = await this.products.find({ where, order: { id: 'DESC' } });
+    // 公开模式：仅返回官网产品
+    if (publicOnly) {
+      const webProducts = await this.webProducts.find({ order: { id: 'DESC' } });
+      return webProducts.map(wp => ({
+        ...wp,
+        prices: wp.price ? [{ price: wp.price, remark: wp.price_remark || '', tax_rate: 0 }] : [],
+        stock_remaining: null,
+        batch_count: 0,
+        images: [],
+        qty_per_unit: null,
+        commission_rate: null,
+        _source: 'website' as const,
+      }));
+    }
     const prices = await this.prices.find();
+    const products = await this.products.find({ order: { id: 'DESC' } });
     const batches = await this.ds.query(
       `SELECT product_id, SUM(qty_remaining) as total_remaining, COUNT(*) as batch_count FROM inventory_batches GROUP BY product_id`
     );
@@ -45,22 +58,6 @@ export class ProductsService {
       images: imageMap.get(p.id) || [],
       _source: 'product' as const,
     }));
-
-    // 公开模式：合并官网产品
-    if (publicOnly) {
-      const webProducts = await this.webProducts.find({ order: { id: 'DESC' } });
-      const merged = webProducts.map(wp => ({
-        ...wp,
-        prices: wp.price ? [{ price: wp.price, remark: wp.price_remark || '', tax_rate: 0 }] : [],
-        stock_remaining: null,
-        batch_count: 0,
-        images: [],
-        qty_per_unit: null,
-        commission_rate: null,
-        _source: 'website' as const,
-      }));
-      return [...result, ...merged];
-    }
 
     return result;
   }

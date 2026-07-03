@@ -37,9 +37,6 @@ export class Product {
   @Column({ name: 'commission_rate', type: 'real', nullable: true })
   commission_rate: number;
 
-  @Column({ name: 'show_on_website', type: 'boolean', default: true })
-  show_on_website: boolean;
-
   @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 
