@@ -1,4 +1,4 @@
-import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, UseGuards } from '@nestjs/common';
+import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, UseGuards, Req } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -16,8 +16,11 @@ export class TagsController {
   @Get()
   @Public()
   @ApiOperation({ summary: '标签列表' })
-  list() {
-    return this.repo.find({ order: { sort_order: 'ASC' } });
+  list(@Req() req?: any) {
+    // 检测是否有 JWT token：有 → 返回全部标签，无 → 仅返回 show_on_website=true 的标签
+    const hasAuth = !!(req?.headers?.authorization?.startsWith('Bearer '));
+    const where: any = hasAuth ? {} : { show_on_website: true };
+    return this.repo.find({ where, order: { sort_order: 'ASC' } });
   }
 
   @Post()

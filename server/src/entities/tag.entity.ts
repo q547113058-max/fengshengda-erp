@@ -13,4 +13,7 @@ export class Tag {
 
   @Column({ name: 'can_delete', type: 'boolean', default: true })
   can_delete: boolean;
+
+  @Column({ name: 'show_on_website', type: 'boolean', default: true })
+  show_on_website: boolean;
 }
