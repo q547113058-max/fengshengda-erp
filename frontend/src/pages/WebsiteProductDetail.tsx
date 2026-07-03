@@ -17,7 +17,7 @@ const fields: FieldDef[] = [
   { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01 },
   { name: 'price_remark', label: '价格备注' },
   { name: 'stock',        label: '库存(吨)', type: 'number', min: 0, step: 0.01 },
-  { name: 'tag_ids', label: '标签', type: 'select', options: [] },
+  { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
   { name: 'remark',       label: '备注', type: 'textarea' },
 ];
 
@@ -62,6 +62,8 @@ export default function WebsiteProductDetail() {
     }).finally(() => setLoading(false));
   };
   useEffect(reload, [id]);
+  const [tags, setTags] = useState<any[]>([]);
+  useEffect(() => { api.list<any[]>("tags").then(setTags).catch(() => {}); }, []);
 
   const savePrices = async () => {
     const first = editPrices[0] || { price: 0, remark: '' };

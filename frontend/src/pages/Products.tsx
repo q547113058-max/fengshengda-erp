@@ -24,6 +24,8 @@ export default function Products() {
     api.products().then(setList).finally(() => setLoading(false));
   };
   useEffect(reload, []);
+  const [tags, setTags] = useState<any[]>([]);
+  useEffect(() => { api.list<any[]>("tags").then(setTags).catch(() => {}); }, []);
 
   const grades = useMemo(() => Array.from(new Set(list.map(p => p.grade).filter(Boolean))), [list]);
   const origins = useMemo(() => Array.from(new Set(list.map(p => p.origin).filter(Boolean))), [list]);
@@ -47,7 +49,7 @@ export default function Products() {
     { name: 'price_remark', label: '价格备注', placeholder: '如：1%农副价、散客价' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1, placeholder: '如：3，留空则用业务员自有佣金' },
     { name: 'show_on_website', label: '展示到官网', type: 'switch', initialValue: false },
-    { name: 'tag_ids', label: '标签', type: 'select', options: [] },
+    { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const editFields: FieldDef[] = [
@@ -60,7 +62,7 @@ export default function Products() {
     { name: 'goods_location', label: '货地' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1 },
     { name: 'show_on_website', label: '展示到官网', type: 'switch' },
-    { name: 'tag_ids', label: '标签', type: 'select', options: [] },
+    { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
   const fields = editing ? editFields : newFields;

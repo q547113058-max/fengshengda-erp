@@ -16,6 +16,7 @@ export interface FieldDef {
   step?: number;
   disabled?: boolean;
   initialValue?: any;
+  multiple?: boolean;
 }
 
 interface Props {
@@ -131,7 +132,7 @@ export default function EditModal({ open, title, fields, initial = {}, onCancel,
           >
             {f.type === 'number' && <InputNumber min={f.min} step={f.step} style={{ width: '100%' }} placeholder={f.placeholder} disabled={f.disabled} />}
             {f.type === 'select' && (
-              <Select placeholder={f.placeholder || `请选择${f.label}`} options={f.options || []} allowClear disabled={f.disabled} />
+              <Select placeholder={f.placeholder || `请选择${f.label}`} options={f.options || []} allowClear disabled={f.disabled} mode={f.multiple ? 'multiple' : undefined} />
             )}
             {f.type === 'textarea' && <Input.TextArea rows={3} placeholder={f.placeholder} disabled={f.disabled} />}
             {f.type === 'password' && <Input.Password placeholder={f.placeholder} disabled={f.disabled} />}

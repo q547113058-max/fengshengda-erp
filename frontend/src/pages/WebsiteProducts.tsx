@@ -21,6 +21,8 @@ export default function WebsiteProducts() {
     api.list<any[]>('website-products').then(setList).finally(() => setLoading(false));
   };
   useEffect(reload, []);
+  const [tags, setTags] = useState<any[]>([]);
+  useEffect(() => { api.list<any[]>("tags").then(setTags).catch(() => {}); }, []);
 
   const fields: FieldDef[] = [
     { name: 'category',     label: '品名', required: true, placeholder: '如：卤鸡爪' },
@@ -32,7 +34,7 @@ export default function WebsiteProducts() {
     { name: 'price',        label: '展示价(元/吨)', type: 'number', min: 0, step: 0.01, placeholder: '如：18.80' },
     { name: 'price_remark', label: '价格备注', placeholder: '如：农副价' },
     { name: 'remark',       label: '备注', type: 'textarea' },
-    { name: 'tag_ids', label: '标签', type: 'select', options: [] },
+    { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
   ];
 
   const openNew = () => { setEditing(null); setModalOpen(true); };
