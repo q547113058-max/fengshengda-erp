@@ -5,10 +5,10 @@ export class Tag {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ length: 50 })
+  @Column({ length: 50, unique: true })
   name: string;
 
-  @Column({ name: 'sort_order', type: 'int', default: 0 })
+  @Column({ name: 'sort_order', type: 'int', default: 0, unique: true })
   sort_order: number;
 
   @Column({ name: 'can_delete', type: 'boolean', default: true })
