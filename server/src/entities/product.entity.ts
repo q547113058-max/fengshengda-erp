@@ -42,6 +42,9 @@ export class Product {
   @Column({ name: 'tag_ids', type: 'simple-json', nullable: true })
   tag_ids: number[];
 
+  @Column({ name: 'pin_order', type: 'int', default: 0 })
+  pin_order: number;
+
   @Column({ name: 'created_at', type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
   created_at: Date;
 

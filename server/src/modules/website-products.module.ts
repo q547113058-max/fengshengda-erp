@@ -1,4 +1,4 @@
-import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, Query, UseGuards } from '@nestjs/common';
+import { Module, Controller, Get, Post, Put, Delete, Param, ParseIntPipe, Body, Query, UseGuards, BadRequestException } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -28,7 +28,12 @@ export class WebsiteProductsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '新增官网产品' })
-  create(@Body() body: Partial<WebsiteProduct>) {
+  async create(@Body() body: Partial<WebsiteProduct>) {
+    if ((body as any).pin_order > 0) {
+      const count = await this.repo.count();
+      const total = await this.repo.query(`SELECT COUNT(*) as c FROM website_products WHERE pin_order > 0`);
+      if ((total[0]?.c || 0) >= 5) throw new BadRequestException('置顶产品不能超过5个');
+    }
     return this.repo.save(this.repo.create(body));
   }
 
@@ -36,7 +41,11 @@ export class WebsiteProductsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: '更新官网产品' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<WebsiteProduct>) {
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: Partial<WebsiteProduct>) {
+    if ((body as any).pin_order > 0) {
+      const total = await this.repo.query(`SELECT COUNT(*) as c FROM website_products WHERE pin_order > 0 AND id != ?`, [id]);
+      if ((total[0]?.c || 0) >= 5) throw new BadRequestException('置顶产品不能超过5个');
+    }
     return this.repo.update(id, body);
   }
 

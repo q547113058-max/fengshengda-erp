@@ -99,6 +99,13 @@ export class ProductsService {
   /** 创建产品（可同时挂价格 + 有货地时自动建库存批次） */
   async create(body: CreateProductDto) {
     const { prices, ...productData } = body;
+    // 置顶校验
+    if ((productData as any).pin_order > 0) {
+      const count = await this.products.count({ where: { pin_order: (0 as any) } });
+      // count where pin_order > 0
+      const total = await this.ds.query(`SELECT COUNT(*) as c FROM products WHERE pin_order > 0`);
+      if ((total[0]?.c || 0) >= 5) throw new BadRequestException('置顶产品不能超过5个');
+    }
     // 前端留空时 qty_per_unit 可能为 undefined/null，设默认值 1
     if (productData.qty_per_unit == null) (productData as any).qty_per_unit = 1;
     const qty = (productData as any).qty_per_unit as number;
@@ -141,6 +148,11 @@ export class ProductsService {
   /** 更新产品 */
   async update(id: number, body: any) {
     const { prices, ...productData } = body;
+    // 置顶校验：排除自身
+    if ((productData as any).pin_order > 0) {
+      const total = await this.ds.query(`SELECT COUNT(*) as c FROM products WHERE pin_order > 0 AND id != ?`, [id]);
+      if ((total[0]?.c || 0) >= 5) throw new BadRequestException('置顶产品不能超过5个');
+    }
     if (Object.keys(productData).length > 0) {
       await this.products.update(id, productData);
     }
