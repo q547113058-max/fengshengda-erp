@@ -1,7 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { ProductPrice } from './product-price.entity';
 import { InventoryBatch } from './inventory-batch.entity';
-import { MediaAsset } from './media-asset.entity';
 
 export type Role = 'boss' | 'admin' | 'finance' | 'warehouse' | 'sales';
 
@@ -37,7 +36,4 @@ export class User {
 
   @OneToMany(() => InventoryBatch, ib => ib.product)
   batches: InventoryBatch[];
-
-  @OneToMany(() => MediaAsset, m => m.product)
-  media: MediaAsset[];
 }
