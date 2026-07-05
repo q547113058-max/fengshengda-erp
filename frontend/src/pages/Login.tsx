@@ -3,7 +3,6 @@ import { Form, Input, Button, message, App, Spin } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/store';
-import { api } from '@/api/client';
 import { preloadPages } from '@/utils/preload';
 
 const ROLES: Array<{ username: string; label: string; desc: string }> = [
@@ -33,31 +32,18 @@ export default function Login() {
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
 
-  // 登录页加载时预取产品列表（用 demo 账号拿 token）
+  // 登录页加载时预取产品列表（/api/products 已是公开接口，无需认证）
   useEffect(() => {
     (async () => {
       setLoadingProducts(true);
       try {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: 'boss', password: 'demo' }),
-        });
-        if (!res.ok) throw new Error('auth failed');
-        const { access_token } = await res.json();
-        const r = await fetch('/api/products', {
-          headers: { Authorization: 'Bearer ' + access_token },
-        });
-        console.log('[Login] products response status:', r.status);
+        const r = await fetch('/api/products');
         if (r.ok) {
           const data = await r.json();
-          console.log('[Login] products count:', data.length, 'first:', JSON.stringify(data[0]));
           setProducts(data);
-        } else {
-          console.log('[Login] products fetch failed, status:', r.status);
         }
       } catch (e) {
-        console.error('[Login] 产品数据加载失败:', e);
+        // 静默处理：产品数据加载失败不影响登录功能
       } finally {
         setLoadingProducts(false);
       }
@@ -81,7 +67,6 @@ export default function Login() {
   };
 
   const formatPrice = (prices: ProductSummary['prices']) => {
-    console.log('[Login] render - products length:', products.length);
     if (!prices?.length) return '—';
     return prices.map(p => `¥${p.price.toFixed(2)}${p.remark ? ` (${p.remark})` : ''}`).join(' / ');
   };
