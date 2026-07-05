@@ -22,7 +22,7 @@ export class ProductsService {
   /** 列表（带税票价+库存+图片），publicOnly 时合并官网产品+已展示产品 */
   async list(publicOnly = false) {
     const where: any = publicOnly ? { show_on_website: true } : {};
-    const products = await this.products.find({ where, order: { id: 'DESC' } });
+    const products = await this.products.find({ where, order: { pin_order: 'DESC', id: 'DESC' } });
     const prices = await this.prices.find();
     const batches = await this.ds.query(
       `SELECT product_id, SUM(qty_remaining) as total_remaining, COUNT(*) as batch_count FROM inventory_batches GROUP BY product_id`

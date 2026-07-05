@@ -120,7 +120,10 @@ export default function Products() {
         columns={[
           { title: '品类', dataIndex: 'category', width: 120, render: (v: string, r: any) => (
             <div>
-              <div style={{ fontWeight: 500 }}>{v}</div>
+              <div style={{ fontWeight: 500 }}>
+                {r.pin_order > 0 && <Tag color="orange" style={{ marginRight: 4, fontSize: 10, lineHeight: '16px' }}>置顶{r.pin_order}</Tag>}
+                {v}
+              </div>
               {r.remark && <div className="text-ink-3" style={{ fontSize: 11 }}>{r.remark}</div>}
             </div>
           )},
