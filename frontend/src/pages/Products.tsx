@@ -30,6 +30,23 @@ export default function Products() {
   const grades = useMemo(() => Array.from(new Set(list.map(p => p.grade).filter(Boolean))), [list]);
   const origins = useMemo(() => Array.from(new Set(list.map(p => p.origin).filter(Boolean))), [list]);
 
+  // 已占用的置顶优先级（排除当前编辑产品的值）
+  const usedPins = useMemo(() => {
+    const pins = new Set<number>();
+    list.forEach(p => { if (p.pin_order > 0) pins.add(p.pin_order); });
+    return pins;
+  }, [list]);
+
+  const pinOptions = (currentPin?: number) => {
+    const options = [{ value: 0, label: '不置顶' }];
+    for (let i = 1; i <= 5; i++) {
+      if (!usedPins.has(i) || i === currentPin) {
+        options.push({ value: i, label: `置顶第${i}位` });
+      }
+    }
+    return options;
+  };
+
   const filtered = list.filter(p => {
     if (kw && !`${p.category} ${p.factory_code} ${p.spec}`.toLowerCase().includes(kw.toLowerCase())) return false;
     if (grade && p.grade !== grade) return false;
@@ -49,14 +66,7 @@ export default function Products() {
     { name: 'price_remark', label: '价格备注', placeholder: '如：1%农副价、散客价' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1, placeholder: '如：3，留空则用业务员自有佣金' },
     { name: 'show_on_website', label: '展示到官网', type: 'switch', initialValue: false },
-    { name: 'pin_order', label: '置顶优先级', type: 'select', options: [
-      { value: 0, label: '不置顶' },
-      { value: 1, label: '置顶第1位' },
-      { value: 2, label: '置顶第2位' },
-      { value: 3, label: '置顶第3位' },
-      { value: 4, label: '置顶第4位' },
-      { value: 5, label: '置顶第5位' },
-    ], initialValue: 0 },
+    { name: 'pin_order', label: '置顶优先级', type: 'select', options: pinOptions(), initialValue: 0 },
     { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
@@ -70,14 +80,7 @@ export default function Products() {
     { name: 'goods_location', label: '货地' },
     { name: 'commission_rate', label: '佣金(%)', type: 'number', min: 0, step: 0.1 },
     { name: 'show_on_website', label: '展示到官网', type: 'switch' },
-    { name: 'pin_order', label: '置顶优先级', type: 'select', options: [
-      { value: 0, label: '不置顶' },
-      { value: 1, label: '置顶第1位' },
-      { value: 2, label: '置顶第2位' },
-      { value: 3, label: '置顶第3位' },
-      { value: 4, label: '置顶第4位' },
-      { value: 5, label: '置顶第5位' },
-    ] },
+    { name: 'pin_order', label: '置顶优先级', type: 'select', options: pinOptions(editing?.pin_order) },
     { name: 'tag_ids', label: '标签', type: 'select', options: tags.map(t => ({ value: t.id, label: t.name })), initialValue: [], multiple: true },
     { name: 'remark',       label: '备注', type: 'textarea' },
   ];
