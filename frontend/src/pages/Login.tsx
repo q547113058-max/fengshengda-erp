@@ -26,8 +26,8 @@ export default function Login() {
   const nav = useNavigate();
   const { message: msgApi } = App.useApp();
   const login = useAuth(s => s.login);
-  const [username, setUsername] = useState('boss');
-  const [password, setPassword] = useState('demo');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
